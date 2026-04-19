@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'register_screen.dart';
+import 'init_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,13 +12,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _portalUrlController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _portalUrlController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
-      _usernameController.text.trim(),
+      _portalUrlController.text.trim(),
       _passwordController.text,
     );
 
@@ -42,6 +42,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+
+    // 如果未初始化，跳转到初始化页面
+    if (!authProvider.isInitialized && !authProvider.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const InitScreen()),
+        );
+      });
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -78,15 +88,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 48),
                 TextFormField(
-                  controller: _usernameController,
+                  controller: _portalUrlController,
                   decoration: const InputDecoration(
-                    labelText: '用户名',
-                    prefixIcon: Icon(Icons.person),
+                    labelText: '你的 Portal 地址',
+                    hintText: 'https://your-portal.com',
+                    prefixIcon: Icon(Icons.link),
                     border: OutlineInputBorder(),
                   ),
+                  keyboardType: TextInputType.url,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return '请输入用户名';
+                      return '请输入 Portal 地址';
+                    }
+                    if (!value.startsWith('http')) {
+                      return '地址必须以 http:// 或 https:// 开头';
                     }
                     return null;
                   },
@@ -141,17 +156,50 @@ class _LoginScreenState extends State<LoginScreen> {
                         )
                       : const Text('登录', style: TextStyle(fontSize: 16)),
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegisterScreen(),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, 
+                            size: 16, 
+                            color: Colors.grey[600]
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '提示',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  child: const Text('还没有账号？去注册'),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Portal 地址就是你的身份标识',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        '例如：https://agentp2p.cn',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

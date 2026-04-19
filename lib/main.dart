@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
+import 'screens/init_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -52,9 +53,18 @@ class AuthWrapper extends StatelessWidget {
           );
         }
         
-        return authProvider.isAuthenticated 
-            ? const HomeScreen() 
-            : const LoginScreen();
+        // 首次使用，需要初始化
+        if (!authProvider.isInitialized) {
+          return const InitScreen();
+        }
+        
+        // 已登录
+        if (authProvider.isAuthenticated) {
+          return const HomeScreen();
+        }
+        
+        // 未登录
+        return const LoginScreen();
       },
     );
   }
