@@ -20,10 +20,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     // 初始化 WebSocket
+    _initWebSocket();
+  }
+  
+  void _initWebSocket() async {
     final authProvider = context.read<AuthProvider>();
     final chatProvider = context.read<ChatProvider>();
-    if (authProvider.user != null) {
-      chatProvider.initWebSocket(authProvider.user!.id.toString());
+    
+    if (authProvider.user != null && authProvider.portalUrl != null) {
+      // 初始化 WebSocket 连接
+      await chatProvider.initWebSocket(
+        baseUrl: authProvider.portalUrl!,
+        userId: authProvider.user!.id.toString(),
+      );
+      // 加载联系人
       chatProvider.loadContacts();
     }
   }
