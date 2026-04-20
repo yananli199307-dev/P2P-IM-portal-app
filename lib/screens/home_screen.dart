@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'contacts_screen.dart';
 import 'chat_screen.dart';
+import 'requests_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final screens = [
       const ContactsScreen(),
       const ChatScreen(),
+      const RequestsScreen(),
       const SettingsScreen(),
     ];
 
@@ -65,6 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat),
             label: '消息',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_add_outlined),
+            selectedIcon: Icon(Icons.person_add),
+            label: '请求',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
