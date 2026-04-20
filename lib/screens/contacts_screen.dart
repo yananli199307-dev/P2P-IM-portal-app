@@ -29,19 +29,13 @@ class _ContactsScreenState extends State<ContactsScreen> {
   }
 
   Future<void> _loadGroupInvites() async {
-    setState(() {
-      _isLoadingInvites = true;
-    });
     try {
       final invites = await ApiService().getGroupInvites();
       setState(() {
         _groupInvites = invites.map((i) => GroupInvite.fromJson(i)).toList();
-        _isLoadingInvites = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoadingInvites = false;
-      });
+      // 忽略错误
     }
   }
 
