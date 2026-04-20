@@ -11,8 +11,9 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Portal 地址，运行时设置
-  static String baseUrl = 'https://agentp2p.cn/api';
+  // Portal 地址，默认为当前域名（Web模式）
+  // 在 Flutter App 中运行时应该从配置读取
+  static String baseUrl = '/api';
   
   late Dio _dio;
   String? _token;
