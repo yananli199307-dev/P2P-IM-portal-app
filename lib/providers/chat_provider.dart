@@ -16,6 +16,13 @@ class ChatProvider extends ChangeNotifier {
   bool _isConnected = false;
   String? _baseUrl;
   String? _userId;
+  
+  // 未读消息计数
+  Map<int, int> _unreadCounts = {};
+  int _totalUnreadCount = 0;
+  
+  Map<int, int> get unreadCounts => _unreadCounts;
+  int get totalUnreadCount => _totalUnreadCount;
 
   List<Contact> get contacts => _contacts;
   List<Message> get messages => _messages;
@@ -84,13 +91,18 @@ class ChatProvider extends ChangeNotifier {
     try {
       final newMessage = Message.fromJson(data);
       
-      // 如果当前正在查看该联系人，添加到消息列表
+      // 如果当前正在查看该联系人，添加到消息列表并标记已读
       if (newMessage.contactId == _selectedContact?.id) {
         _messages.add(newMessage);
+        // 如果是收到的消息，自动标记为已读
+        if (!newMessage.isFromMe && newMessage.contactId != null) {
+          markContactMessagesAsRead(newMessage.contactId!);
+        }
         notifyListeners();
+      } else if (!newMessage.isFromMe && newMessage.contactId != null) {
+        // 不在当前聊天界面，增加未读计数
+        incrementUnreadCount(newMessage.contactId!);
       }
-      
-      // TODO: 显示通知（如果不在当前聊天界面）
     } catch (e) {
       if (kDebugMode) {
         print('[ChatProvider] Error handling new message: $e');
@@ -106,6 +118,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       _contacts = await _apiService.getContacts();
       _error = null;
+      // 加载未读消息
+      await loadUnreadMessages();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -132,6 +146,8 @@ class ChatProvider extends ChangeNotifier {
     _messages = [];
     notifyListeners();
     loadMessages(contact.id);
+    // 标记该联系人的消息为已读
+    markContactMessagesAsRead(contact.id);
   }
 
   /// 加载消息历史
@@ -140,7 +156,10 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _messages = await _apiService.getMessages(contactId);
+      final messages = await _apiService.getMessages(contactId);
+      // 按时间排序（旧的在上面，新的在下面）
+      messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      _messages = messages;
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -183,6 +202,61 @@ class ChatProvider extends ChangeNotifier {
   Future<void> disconnect() async {
     await _wsService.disconnect();
     _isConnected = false;
+    notifyListeners();
+  }
+
+  /// 加载未读消息
+  Future<void> loadUnreadMessages() async {
+    try {
+      final unreadMessages = await _apiService.getUnreadMessages();
+      
+      // 按联系人统计未读数量
+      _unreadCounts = {};
+      for (final message in unreadMessages) {
+        if (message.contactId != null) {
+          _unreadCounts[message.contactId!] = (_unreadCounts[message.contactId!] ?? 0) + 1;
+        }
+      }
+      
+      // 计算总未读数
+      _totalUnreadCount = _unreadCounts.values.fold(0, (sum, count) => sum + count);
+      
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[ChatProvider] Error loading unread messages: $e');
+      }
+    }
+  }
+
+  /// 标记联系人的所有消息为已读
+  Future<void> markContactMessagesAsRead(int contactId) async {
+    try {
+      // 获取该联系人的未读消息
+      final unreadMessages = await _apiService.getUnreadMessages();
+      final contactUnreadMessages = unreadMessages.where((m) => m.contactId == contactId).toList();
+      
+      // 逐个标记为已读
+      for (final message in contactUnreadMessages) {
+        await _apiService.markMessageAsRead(message.id);
+      }
+      
+      // 更新本地未读计数
+      _unreadCounts.remove(contactId);
+      _totalUnreadCount = _unreadCounts.values.fold(0, (sum, count) => sum + count);
+      
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[ChatProvider] Error marking messages as read: $e');
+      }
+    }
+  }
+
+  /// 更新未读计数（用于 WebSocket 收到新消息时）
+  void incrementUnreadCount(int contactId) {
+    _unreadCounts[contactId] = (_unreadCounts[contactId] ?? 0) + 1;
+    _totalUnreadCount++;
     notifyListeners();
   }
 
