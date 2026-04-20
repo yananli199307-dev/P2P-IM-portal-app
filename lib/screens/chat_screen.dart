@@ -42,6 +42,7 @@ class ChatScreen extends StatelessWidget {
               itemCount: chatProvider.contacts.length,
               itemBuilder: (context, index) {
                 final contact = chatProvider.contacts[index];
+                final unreadCount = chatProvider.unreadCounts[contact.id] ?? 0;
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF6C63FF),
@@ -51,7 +52,24 @@ class ChatScreen extends StatelessWidget {
                     ),
                   ),
                   title: Text(contact.displayName),
-                  subtitle: const Text('点击开始聊天'),
+                  subtitle: Text(unreadCount > 0 ? '$unreadCount 条未读消息' : '点击开始聊天'),
+                  trailing: unreadCount > 0
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : null,
                   onTap: () {
                     chatProvider.selectContact(contact);
                     Navigator.push(

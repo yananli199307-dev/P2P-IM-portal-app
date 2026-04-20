@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'contacts_screen.dart';
 import 'chat_screen.dart';
-import 'requests_screen.dart';
+import 'groups_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -41,10 +41,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final chatProvider = context.watch<ChatProvider>();
+    final totalUnread = chatProvider.totalUnreadCount;
+    
     final screens = [
       const ContactsScreen(),
       const ChatScreen(),
-      const RequestsScreen(),
+      const GroupsScreen(),
       const SettingsScreen(),
     ];
 
@@ -57,23 +60,31 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.contacts_outlined),
             selectedIcon: Icon(Icons.contacts),
             label: '联系人',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat),
+            icon: Badge(
+              isLabelVisible: totalUnread > 0,
+              label: Text(totalUnread > 99 ? '99+' : '$totalUnread'),
+              child: const Icon(Icons.chat_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: totalUnread > 0,
+              label: Text(totalUnread > 99 ? '99+' : '$totalUnread'),
+              child: const Icon(Icons.chat),
+            ),
             label: '消息',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_add_outlined),
-            selectedIcon: Icon(Icons.person_add),
-            label: '请求',
+          const NavigationDestination(
+            icon: Icon(Icons.group_outlined),
+            selectedIcon: Icon(Icons.group),
+            label: '群组',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: '设置',

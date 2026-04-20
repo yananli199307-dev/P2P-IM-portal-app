@@ -26,7 +26,7 @@ class SettingsScreen extends StatelessWidget {
                       radius: 32,
                       backgroundColor: const Color(0xFF6C63FF),
                       child: Text(
-                        (user.displayName ?? user.username)[0].toUpperCase(),
+                        (user.displayName ?? user.portalUrl)[0].toUpperCase(),
                         style: const TextStyle(
                           fontSize: 24,
                           color: Colors.white,
@@ -39,15 +39,15 @@ class SettingsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user.displayName ?? user.username,
+                            user.displayName ?? user.portalUrl,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          if (user.email != null)
+                          if (user.portalUrl.isNotEmpty)
                             Text(
-                              user.email!,
+                              user.portalUrl,
                               style: TextStyle(
                                 color: Colors.grey[600],
                               ),
@@ -102,7 +102,7 @@ class SettingsScreen extends StatelessWidget {
                 context: context,
                 applicationName: 'Agent Portal',
                 applicationVersion: '1.0.0',
-                applicationDescription: const Text('P2P 安全通讯应用'),
+                applicationLegalese: 'P2P 安全通讯应用',
               );
             },
           ),

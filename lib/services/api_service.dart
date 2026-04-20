@@ -219,4 +219,88 @@ class ApiService {
     });
     return Message.fromJson(response.data);
   }
+
+  // 获取未读消息
+  Future<List<Message>> getUnreadMessages() async {
+    final response = await _dio.get('/messages/unread');
+    return (response.data as List)
+        .map((json) => Message.fromJson(json))
+        .toList();
+  }
+
+  // 标记消息为已读
+  Future<void> markMessageAsRead(int messageId) async {
+    await _dio.post('/messages/$messageId/read');
+  }
+
+  // ========== 群组 ==========
+
+  // 获取群组列表
+  Future<List<Map<String, dynamic>>> getGroups() async {
+    final response = await _dio.get('/groups');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  // 创建群组
+  Future<Map<String, dynamic>> createGroup(String name, {String? description, List<int>? memberIds}) async {
+    final response = await _dio.post('/groups', data: {
+      'name': name,
+      'description': description,
+      'member_ids': memberIds ?? [],
+    });
+    return response.data;
+  }
+
+  // 邀请成员加入群组
+  Future<Map<String, dynamic>> inviteToGroup(int groupId, int contactId) async {
+    final response = await _dio.post('/groups/invite', data: {
+      'group_id': groupId,
+      'contact_id': contactId,
+    });
+    return response.data;
+  }
+
+  // 获取群邀请列表
+  Future<List<Map<String, dynamic>>> getGroupInvites() async {
+    final response = await _dio.get('/groups/invites');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  // 接受群邀请
+  Future<Map<String, dynamic>> acceptGroupInvite(int inviteId) async {
+    final response = await _dio.post('/groups/invites/$inviteId/accept');
+    return response.data;
+  }
+
+  // 拒绝群邀请
+  Future<Map<String, dynamic>> rejectGroupInvite(int inviteId) async {
+    final response = await _dio.post('/groups/invites/$inviteId/reject');
+    return response.data;
+  }
+
+  // 获取群消息
+  Future<List<Map<String, dynamic>>> getGroupMessages(int groupId, {int limit = 50}) async {
+    final response = await _dio.get('/messages/group/$groupId', queryParameters: {
+      'limit': limit,
+    });
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  // 发送群消息
+  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text'}) async {
+    final response = await _dio.post(
+      '/messages/group',
+      data: {
+        'group_id': groupId,
+        'content': content,
+        'message_type': messageType,
+      },
+      options: Options(
+        headers: {
+          'X-Sender-Portal': _portalUrl ?? '',
+        },
+      ),
+    );
+    return response.data;
+  }
 }
