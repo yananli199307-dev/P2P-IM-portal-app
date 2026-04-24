@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/contact.dart';
@@ -287,14 +288,19 @@ class ApiService {
   }
 
   // 发送群消息
-  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text'}) async {
+  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text', String? fileUrl, String? fileName, int? fileSize}) async {
+    final data = {
+      'group_id': groupId,
+      'content': content,
+      'message_type': messageType,
+    };
+    if (fileUrl != null) data['file_url'] = fileUrl;
+    if (fileName != null) data['file_name'] = fileName;
+    if (fileSize != null) data['file_size'] = fileSize;
+    
     final response = await _dio.post(
       '/messages/group',
-      data: {
-        'group_id': groupId,
-        'content': content,
-        'message_type': messageType,
-      },
+      data: data,
       options: Options(
         headers: {
           'X-Sender-Portal': _portalUrl ?? '',
@@ -302,5 +308,42 @@ class ApiService {
       ),
     );
     return response.data;
+  }
+
+  // ========== 文件上传 ==========
+
+  /// 上传文件
+  Future<Map<String, dynamic>> uploadFile(String filePath) async {
+    final fileName = filePath.split('/').last;
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: fileName),
+    });
+
+    final response = await _dio.post(
+      '/files/upload',
+      data: formData,
+    );
+
+    return response.data;
+  }
+
+  // ========== 群成员管理 ==========
+
+  /// 获取群成员列表
+  Future<List<Map<String, dynamic>>> getGroupMembers(int groupId) async {
+    final response = await _dio.get('/groups/$groupId/members');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  /// 移除群成员
+  Future<void> removeGroupMember(int groupId, String memberPortal) async {
+    await _dio.post('/groups/$groupId/members/remove', data: {
+      'member_portal': memberPortal,
+    });
+  }
+
+  /// 解散群组
+  Future<void> dissolveGroup(int groupId) async {
+    await _dio.post('/groups/$groupId/dissolve');
   }
 }
