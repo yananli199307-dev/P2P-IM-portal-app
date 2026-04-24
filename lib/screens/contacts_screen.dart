@@ -6,6 +6,7 @@ import '../models/contact.dart';
 import '../models/group.dart';
 import 'add_contact_screen.dart';
 import 'chat_detail_screen.dart';
+import 'agent_chat_screen.dart';
 
 
 // 导出供其他文件使用
@@ -136,6 +137,24 @@ class _ContactsScreenState extends State<ContactsScreen> {
                   ],
                 ),
               ),
+            // My Agent 入口
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Colors.blue,
+                child: Text('🤖'),
+              ),
+              title: const Text('My Agent'),
+              subtitle: const Text('AI 助手'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AgentChatScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
             // 联系人列表
             Expanded(
               child: chatProvider.isLoading && chatProvider.contacts.isEmpty

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
 import 'package:intl/intl.dart';
@@ -39,6 +40,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         );
       }
     });
+  }
+
+  Future<void> _sendFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final filePath = result.files.first.path;
+      if (filePath == null) return;
+
+      await context.read<ChatProvider>().sendFileMessage(filePath);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('发送文件失败: $e')),
+      );
+    }
   }
 
   @override
@@ -102,10 +123,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () {
-                      // TODO: 添加附件
-                    },
+                    icon: const Icon(Icons.attach_file),
+                    onPressed: _sendFile,
                   ),
                   Expanded(
                     child: TextField(

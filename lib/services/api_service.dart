@@ -346,4 +346,39 @@ class ApiService {
   Future<void> dissolveGroup(int groupId) async {
     await _dio.post('/groups/$groupId/dissolve');
   }
+
+  // ========== My Agent ==========
+
+  /// 获取 My Agent 历史消息
+  Future<List<Map<String, dynamic>>> getAgentMessages({int limit = 50}) async {
+    final userId = await getToken() ?? '1';
+    final response = await _dio.get('/internal/messages', queryParameters: {
+      'contact_id': 0,
+      'limit': limit,
+      'token': userId,
+    });
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  /// 发送消息给 My Agent
+  Future<void> sendAgentMessage(String content) async {
+    await _dio.post('/messages', data: {
+      'contact_id': 0,
+      'content': content,
+      'message_type': 'text',
+    });
+  }
+
+  /// 发送文件给 My Agent
+  Future<void> sendAgentFileMessage(String filePath) async {
+    final fileData = await uploadFile(filePath);
+    await _dio.post('/messages', data: {
+      'contact_id': 0,
+      'content': '📎 ${fileData['file_name']}',
+      'message_type': fileData['file_type'] == 'image' ? 'image' : 'file',
+      'file_url': fileData['file_url'],
+      'file_name': fileData['file_name'],
+      'file_size': fileData['file_size'],
+    });
+  }
 }

@@ -260,6 +260,28 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 发送文件消息
+  Future<void> sendFileMessage(String filePath) async {
+    if (_selectedContact == null) return;
+
+    try {
+      final message = await _apiService.sendFileMessage(_selectedContact!.id, filePath);
+      _messages.add(message);
+      notifyListeners();
+      
+      // 滚动到底部
+      Future.delayed(const Duration(milliseconds: 100), () {
+        // 触发滚动
+      });
+    } catch (e) {
+      _error = '发送文件失败: $e';
+      notifyListeners();
+      if (kDebugMode) {
+        print('[ChatProvider] Error sending file: $e');
+      }
+    }
+  }
+
   @override
   void dispose() {
     _wsService.disconnect();
