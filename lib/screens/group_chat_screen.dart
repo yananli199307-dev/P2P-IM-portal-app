@@ -67,7 +67,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   Future<void> _loadMessages() async {
     try {
-      final messagesData = await ApiService().getGroupMessages(widget.group.id);
+      List<Map<String, dynamic>> messagesData;
+      
+      // 群主使用数字 ID，成员使用 UUID
+      if (widget.group.isOwner) {
+        messagesData = await ApiService().getGroupMessages(widget.group.id);
+      } else {
+        messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!);
+      }
+      
       setState(() {
         _messages = messagesData.map((m) => GroupMessage.fromJson(m)).toList();
         _isLoading = false;
@@ -317,6 +325,27 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
+  void _showImagePreview(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: InteractiveViewer(
+          panEnabled: true,
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 0.5,
+          maxScale: 4,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Center(
+              child: Icon(Icons.broken_image, size: 64),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
@@ -333,14 +362,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     
     Widget content;
     if (message.messageType == 'image' && message.fileUrl != null) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          message.fileUrl!,
-          width: 200,
-          height: 200,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+      content = GestureDetector(
+        onTap: () => _showImagePreview(message.fileUrl!),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            message.fileUrl!,
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+          ),
         ),
       );
     } else if (message.fileUrl != null) {

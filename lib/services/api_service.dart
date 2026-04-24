@@ -279,9 +279,17 @@ class ApiService {
     return response.data;
   }
 
-  // 获取群消息
+  // 获取群消息（群主使用数字 ID）
   Future<List<Map<String, dynamic>>> getGroupMessages(int groupId, {int limit = 50}) async {
     final response = await _dio.get('/messages/group/$groupId', queryParameters: {
+      'limit': limit,
+    });
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  // 获取群消息（成员使用 UUID）
+  Future<List<Map<String, dynamic>>> getGroupMessagesByUuid(String groupUuid, {int limit = 50}) async {
+    final response = await _dio.get('/messages/group/uuid/$groupUuid', queryParameters: {
       'limit': limit,
     });
     return List<Map<String, dynamic>>.from(response.data);

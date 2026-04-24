@@ -5,6 +5,8 @@ class Group {
   final int ownerId;
   final List<int> memberIds;
   final DateTime createdAt;
+  final String? groupUuid;  // 用于成员获取消息
+  final bool isOwner;  // 当前用户是否是群主
 
   Group({
     required this.id,
@@ -13,6 +15,8 @@ class Group {
     required this.ownerId,
     this.memberIds = const [],
     required this.createdAt,
+    this.groupUuid,
+    this.isOwner = false,
   });
 
   factory Group.fromJson(Map<String, dynamic> json) {
@@ -23,6 +27,8 @@ class Group {
       ownerId: json['owner_id'],
       memberIds: List<int>.from(json['member_ids'] ?? []),
       createdAt: DateTime.parse(json['created_at']),
+      groupUuid: json['group_id'],  // API 返回的是 group_id (UUID)
+      isOwner: json['is_owner'] ?? false,
     );
   }
 

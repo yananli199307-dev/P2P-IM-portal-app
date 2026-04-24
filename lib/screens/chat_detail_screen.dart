@@ -158,18 +158,110 @@ class MessageBubble extends StatelessWidget {
 
   const MessageBubble({super.key, required this.message});
 
+  void _showImagePreview(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: InteractiveViewer(
+          panEnabled: true,
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 0.5,
+          maxScale: 4,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Center(
+              child: Icon(Icons.broken_image, size: 64),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatFileSize(int? bytes) {
+    if (bytes == null) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMe = message.isFromMe;
     final time = DateFormat('HH:mm').format(message.createdAt);
 
+    Widget content;
+    if (message.messageType == 'image' && message.fileUrl != null) {
+      // 图片消息
+      content = GestureDetector(
+        onTap: () => _showImagePreview(context, message.fileUrl!),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            message.fileUrl!,
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+          ),
+        ),
+      );
+    } else if (message.fileUrl != null) {
+      // 文件消息
+      content = Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? const Color(0xFF5A52D5) : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.attach_file, color: isMe ? Colors.white : Colors.black87),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.fileName ?? '文件',
+                    style: TextStyle(
+                      color: isMe ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (message.fileSize != null)
+                    Text(
+                      _formatFileSize(message.fileSize),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isMe ? Colors.white70 : Colors.grey[600],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // 文本消息
+      content = Text(
+        message.content,
+        style: TextStyle(
+          color: isMe ? Colors.white : Colors.black87,
+        ),
+      );
+    }
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: message.fileUrl != null ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF6C63FF) : Colors.grey[300],
+          color: message.fileUrl != null ? null : (isMe ? const Color(0xFF6C63FF) : Colors.grey[300]),
           borderRadius: BorderRadius.circular(16),
         ),
         constraints: BoxConstraints(
@@ -178,12 +270,7 @@ class MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              message.content,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
-              ),
-            ),
+            content,
             const SizedBox(height: 4),
             Text(
               time,
