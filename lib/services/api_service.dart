@@ -377,6 +377,43 @@ class ApiService {
     });
   }
 
+  /// 发送文件消息给联系人
+  Future<Message> sendFileMessage(int contactId, String filePath) async {
+    final fileData = await uploadFile(filePath);
+    final response = await _dio.post('/messages', data: {
+      'contact_id': contactId,
+      'content': '📎 ${fileData['file_name']}',
+      'message_type': fileData['file_type'] == 'image' ? 'image' : 'file',
+      'file_url': fileData['file_url'],
+      'file_name': fileData['file_name'],
+      'file_size': fileData['file_size'],
+    });
+    return Message.fromJson(response.data);
+  }
+
+  /// 发送群文件消息
+  Future<Map<String, dynamic>> sendGroupFileMessage(int groupId, String filePath) async {
+    final fileData = await uploadFile(filePath);
+    final response = await _dio.post('/messages/group/$groupId', data: {
+      'content': '📎 ${fileData['file_name']}',
+      'message_type': fileData['file_type'] == 'image' ? 'image' : 'file',
+      'file_url': fileData['file_url'],
+      'file_name': fileData['file_name'],
+      'file_size': fileData['file_size'],
+    });
+    return response.data;
+  }
+
+  /// 修改群名称
+  Future<void> updateGroupName(int groupId, String newName) async {
+    await _dio.put('/groups/$groupId', data: {'name': newName});
+  }
+
+  /// 退出群聊
+  Future<void> leaveGroup(int groupId) async {
+    await _dio.post('/groups/$groupId/leave');
+  }
+
   /// 发送文件给 My Agent
   Future<void> sendAgentFileMessage(String filePath) async {
     final fileData = await uploadFile(filePath);

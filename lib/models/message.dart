@@ -6,6 +6,17 @@ class Message {
   final int? groupId;
   final String content;
   final MessageType type;
+  
+  String get messageType {
+    switch (type) {
+      case MessageType.file:
+        return 'file';
+      case MessageType.image:
+        return 'image';
+      default:
+        return 'text';
+    }
+  }
   final String? fileUrl;
   final String? fileName;
   final int? fileSize;
