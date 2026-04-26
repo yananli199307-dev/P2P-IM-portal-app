@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
-import 'screens/init_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -53,17 +52,12 @@ class AuthWrapper extends StatelessWidget {
           );
         }
         
-        // 首次使用，需要初始化
-        if (!authProvider.isInitialized) {
-          return const InitScreen();
-        }
-        
-        // 已登录
+        // 已登录 → 主页
         if (authProvider.isAuthenticated) {
           return const HomeScreen();
         }
         
-        // 未登录
+        // 未登录 → 登录页（输入 Portal URL + 密码）
         return const LoginScreen();
       },
     );

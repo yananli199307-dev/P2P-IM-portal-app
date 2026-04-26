@@ -49,9 +49,6 @@ class ApiService {
     _portalUrl = url;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('portal_url', url);
-    // 更新 baseUrl
-    baseUrl = '$url/api';
-    _dio.options.baseUrl = baseUrl;
   }
 
   Future<String?> getPortalUrl() async {
@@ -200,6 +197,14 @@ class ApiService {
     return response.data;
   }
 
+  // ========== 会话列表 ==========
+  
+  /// 获取所有会话（私聊+群聊），按最新消息排序
+  Future<List<Map<String, dynamic>>> getConversations() async {
+    final response = await _dio.get('/messages/conversations');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
   // ========== 消息 ==========
   
   Future<List<Message>> getMessages(int contactId, {int limit = 50}) async {
@@ -340,7 +345,11 @@ class ApiService {
   /// 获取群成员列表
   Future<List<Map<String, dynamic>>> getGroupMembers(int groupId) async {
     final response = await _dio.get('/groups/$groupId/members');
-    return List<Map<String, dynamic>>.from(response.data);
+    final data = response.data;
+    if (data is Map && data.containsKey('members')) {
+      return List<Map<String, dynamic>>.from(data['members']);
+    }
+    return List<Map<String, dynamic>>.from(data);
   }
 
   /// 移除群成员

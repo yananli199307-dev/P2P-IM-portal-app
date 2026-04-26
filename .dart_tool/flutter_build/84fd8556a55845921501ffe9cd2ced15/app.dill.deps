@@ -8,16 +8,12 @@ file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/models/message.da
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/models/user.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/providers/auth_provider.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/providers/chat_provider.dart
-file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/add_contact_screen.dart
-file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/agent_chat_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/chat_detail_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/chat_screen.dart
-file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/contacts_screen.dart
+file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/contacts_book_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/group_chat_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/group_members_screen.dart
-file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/groups_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/home_screen.dart
-file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/init_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/invite_member_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/login_screen.dart
 file:///home/Liyanan/.openclaw/workspace/P2P-IM-portal-app/lib/screens/settings_screen.dart

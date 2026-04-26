@@ -125,10 +125,27 @@ class _GroupsScreenState extends State<GroupsScreen> {
                     final group = _groups[index];
                     return ListTile(
                       leading: CircleAvatar(
-                        child: Text(group.name[0].toUpperCase()),
+                        backgroundColor: group.isOwner ? Colors.blue : Colors.grey,
+                        child: Text(
+                          group.isOwner ? '👑' : group.name[0].toUpperCase(),
+                        ),
                       ),
-                      title: Text(group.name),
-                      subtitle: Text('${group.memberIds.length} 人'),
+                      title: Row(
+                        children: [
+                          Text(group.name),
+                          if (group.isOwner)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[100],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text('群主', style: TextStyle(fontSize: 10, color: Colors.orange)),
+                            ),
+                        ],
+                      ),
+                      subtitle: Text('${group.memberCount} 人'),
                       onTap: () {
                         Navigator.push(
                           context,

@@ -150,6 +150,15 @@ class ChatProvider extends ChangeNotifier {
     markContactMessagesAsRead(contact.id);
   }
 
+  /// 通过 ID 选择联系人
+  void selectContactById(int contactId) {
+    final contact = _contacts.firstWhere(
+      (c) => c.id == contactId,
+      orElse: () => _contacts.first,
+    );
+    selectContact(contact);
+  }
+
   /// 加载消息历史
   Future<void> loadMessages(int contactId) async {
     _isLoading = true;

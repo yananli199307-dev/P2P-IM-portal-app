@@ -30,23 +30,23 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 检查初始化状态
-      final initStatus = await _apiService.checkInitStatus();
-      _isInitialized = initStatus['initialized'] ?? false;
-      
-      if (!_isInitialized) {
-        // 首次使用，需要初始化
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-      
-      // 检查是否已登录
+      // 检查是否已登录（从本地存储恢复）
       _token = await _apiService.getToken();
       _portalUrl = await _apiService.getPortalUrl();
       
+      if (_portalUrl != null) {
+        _isInitialized = true;
+        await _apiService.setPortalUrl(_portalUrl!);
+      }
+      
       if (_token != null) {
-        _user = await _apiService.getMe();
+        try {
+          _user = await _apiService.getMe();
+        } catch (_) {
+          // token 过期，清除
+          await _apiService.clearToken();
+          _token = null;
+        }
       }
     } catch (e) {
       _error = e.toString();

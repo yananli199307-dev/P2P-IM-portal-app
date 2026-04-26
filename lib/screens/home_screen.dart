@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
-import 'contacts_screen.dart';
+import 'contacts_book_screen.dart';
 import 'chat_screen.dart';
-import 'groups_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -45,14 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final totalUnread = chatProvider.totalUnreadCount;
     
     final screens = [
-      const ContactsScreen(),
       const ChatScreen(),
-      const GroupsScreen(),
+      const ContactsBookScreen(),
       const SettingsScreen(),
     ];
 
     return Scaffold(
-      body: screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: screens,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
@@ -61,11 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.contacts_outlined),
-            selectedIcon: Icon(Icons.contacts),
-            label: '联系人',
-          ),
           NavigationDestination(
             icon: Badge(
               isLabelVisible: totalUnread > 0,
@@ -80,9 +76,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: '消息',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.group_outlined),
-            selectedIcon: Icon(Icons.group),
-            label: '群组',
+            icon: Icon(Icons.contacts_outlined),
+            selectedIcon: Icon(Icons.contacts),
+            label: '通讯录',
           ),
           const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
