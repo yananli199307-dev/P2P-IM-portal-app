@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/group.dart';
+import "package:provider/provider.dart";
+import "../providers/auth_provider.dart";
 
 class GroupMember {
   final String portalUrl;
@@ -17,7 +19,6 @@ class GroupMember {
     return GroupMember(
       portalUrl: json['portal'] ?? '',
       displayName: json['display_name'] ?? 'Unknown',
-      isOwner: json['is_owner'] ?? false,
     );
   }
 }
@@ -114,24 +115,34 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
                   ),
                   title: Text(member.displayName),
                   subtitle: Text(member.portalUrl),
-                  trailing: member.isOwner
-                      ? const Chip(
-                          label: Text('群主'),
-                          backgroundColor: Colors.blue,
-                          labelStyle: TextStyle(color: Colors.white),
-                        )
-                      : widget.group.isOwner
-                          ? IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () => _showRemoveConfirm(
-                                member.portalUrl,
-                                member.displayName,
-                              ),
-                            )
-                          : null,
+                  trailing: _buildMemberTrailing(member),
                 );
               },
             ),
     );
   }
+
+  Widget? _buildMemberTrailing(GroupMember member) {
+    // 参照 Web 前端：通过 portal 比较判断群主
+    final ownerPortal = widget.group.ownerPortal;
+    final isOwnerMember = ownerPortal != null && member.portalUrl == ownerPortal;
+    final currentPortal = context.read<AuthProvider>().portalUrl;
+    final isMe = currentPortal != null && member.portalUrl == currentPortal;
+    
+    if (isOwnerMember) {
+      return const Chip(
+        label: Text('群主'),
+        backgroundColor: Colors.blue,
+        labelStyle: TextStyle(color: Colors.white),
+      );
+    }
+    // 当前用户是群主但不移除自己和群主
+    if (widget.group.isOwner && !isMe && !isOwnerMember) {
+      return IconButton(
+        icon: const Icon(Icons.remove_circle, color: Colors.red),
+        onPressed: () => _showRemoveConfirm(member.portalUrl, member.displayName),
+      );
+    }
+    return null;
+}
 }

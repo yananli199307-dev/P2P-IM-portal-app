@@ -9,6 +9,7 @@ class Group {
   final DateTime createdAt;
   final String? groupUuid;  // 用于成员获取消息
   final String? ownerName;  // 群主名称
+  final String? ownerPortal;  // 群主 Portal URL（用于成员列表判断）
 
   Group({
     required this.id,
@@ -21,6 +22,7 @@ class Group {
     required this.createdAt,
     this.groupUuid,
     this.ownerName,
+    this.ownerPortal,
   });
 
   factory Group.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Group {
       createdAt: DateTime.parse(json['created_at']),
       groupUuid: json['group_id'] ?? json['group_uuid'],
       ownerName: json['owner_name'],
+      ownerPortal: json['owner_portal'],
     );
   }
 
