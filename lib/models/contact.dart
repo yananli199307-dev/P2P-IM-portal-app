@@ -3,6 +3,8 @@ class Contact {
   final String displayName;
   final String portalUrl;
   final String? avatar;
+  final String? note;
+  final bool isFavorite;
   final bool isActive;
   final DateTime createdAt;
 
@@ -11,6 +13,8 @@ class Contact {
     required this.displayName,
     required this.portalUrl,
     this.avatar,
+    this.note,
+    this.isFavorite = false,
     required this.isActive,
     required this.createdAt,
   });
@@ -21,6 +25,8 @@ class Contact {
       displayName: json['display_name'],
       portalUrl: json['portal_url'],
       avatar: json['avatar'],
+      note: json['note'],
+      isFavorite: json['is_favorite'] ?? false,
       isActive: json['is_active'] ?? true,
       createdAt: DateTime.parse(json['created_at']),
     );

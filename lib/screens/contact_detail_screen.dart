@@ -25,7 +25,8 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   void initState() {
     super.initState();
     _displayName = widget.contact.displayName;
-    _note = _note; // will load from API later
+    _note = widget.contact.note ?? '';
+    _isFavorite = widget.contact.isFavorite;
     _noteController.text = _note;
   }
 
