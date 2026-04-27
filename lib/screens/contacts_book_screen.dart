@@ -17,8 +17,10 @@ class ContactsBookScreen extends StatefulWidget {
 
 class _ContactsBookScreenState extends State<ContactsBookScreen> {
   List<Group> _groups = [];
+  List<Map<String, dynamic>> _requests = [];  // 合并的联系人请求+群邀请
   bool _isLoading = true;
   bool _groupsExpanded = false;
+  bool _requestsExpanded = true;  // 有请求时默认展开
 
   @override
   void initState() {
@@ -29,25 +31,51 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
   Future<void> _loadData() async {
     try {
       final chatProvider = context.read<ChatProvider>();
-      // 确保联系人已加载
       if (chatProvider.contacts.isEmpty) {
         await chatProvider.loadContacts();
       }
-      // 加载群组
-      final groupsData = await ApiService().getGroups();
+      // 并行加载群组和请求
+      final results = await Future.wait([
+        ApiService().getGroups(),
+        _loadRequests(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _groups = groupsData.map((g) => Group.fromJson(g)).toList();
+        _groups = (results[0] as List).map((g) => Group.fromJson(g)).toList();
         _isLoading = false;
       });
     } catch (e) {
       debugPrint('加载通讯录失败: $e');
       if (!mounted) return;
       setState(() => _isLoading = false);
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) _loadData();
-      });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadRequests() async {
+    final merged = <Map<String, dynamic>>[];
+    // 加载联系人请求
+    try {
+      final contactReqs = await ApiService().getReceivedRequests();
+      for (final r in contactReqs) {
+        merged.add({...r, 'type': 'contact'});
+      }
+    } catch (e) {
+      debugPrint('加载联系人请求失败: $e');
+    }
+    // 加载群邀请
+    try {
+      final groupInvites = await ApiService().getGroupInvites();
+      for (final i in groupInvites) {
+        merged.add({...i, 'type': 'group'});
+      }
+    } catch (e) {
+      debugPrint('加载群邀请失败: $e');
+    }
+    setState(() {
+      _requests = merged;
+      if (merged.isNotEmpty) _requestsExpanded = true;
+    });
+    return []; // Future.wait 兼容
   }
 
   void _showCreateGroupDialog() {
@@ -122,6 +150,115 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
     );
   }
 
+  Future<void> _approveRequest(int requestId) async {
+    try {
+      await ApiService().approveRequest(requestId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已添加为联系人')),
+      );
+      _loadData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+    }
+  }
+
+  Future<void> _rejectRequest(int requestId) async {
+    try {
+      await ApiService().rejectRequest(requestId);
+      _loadData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+    }
+  }
+
+  Future<void> _acceptGroupInvite(int inviteId) async {
+    try {
+      await ApiService().acceptGroupInvite(inviteId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已加入群聊')),
+      );
+      _loadData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+    }
+  }
+
+  Future<void> _rejectGroupInvite(int inviteId) async {
+    try {
+      await ApiService().rejectGroupInvite(inviteId);
+      _loadData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+    }
+  }
+
+  Widget _buildRequestItem(Map<String, dynamic> req) {
+    final isGroup = req['type'] == 'group';
+    final id = req['id'];
+    final name = isGroup
+        ? '群邀请: ${req['group_name'] ?? '未知群'}'
+        : (req['requester_name'] ?? '未知');
+    final subtitle = isGroup
+        ? '来自: ${req['inviter_portal'] ?? ''}'
+        : (req['requester_portal'] ?? '');
+    final extra = isGroup ? null : req['message'];
+    final avatarChar = isGroup ? '群' : (name.isNotEmpty ? name[0].toUpperCase() : '?');
+    final avatarColor = isGroup ? Colors.green[100] : Colors.purple[50];
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: avatarColor,
+          child: Text(avatarChar, style: TextStyle(fontSize: 16, color: isGroup ? Colors.green[700] : Colors.purple[700], fontWeight: FontWeight.bold)),
+        ),
+        title: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            if (extra != null && extra.toString().isNotEmpty)
+              Text(extra.toString(), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            isGroup
+                ? TextButton(
+                    onPressed: () => _rejectGroupInvite(id),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                    child: const Text('拒绝', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  )
+                : TextButton(
+                    onPressed: () => _rejectRequest(id),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                    child: const Text('拒绝', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ),
+            isGroup
+                ? TextButton(
+                    onPressed: () => _acceptGroupInvite(id),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      backgroundColor: const Color(0xFF6C63FF),
+                    ),
+                    child: const Text('接受', style: TextStyle(fontSize: 12, color: Colors.white)),
+                  )
+                : TextButton(
+                    onPressed: () => _approveRequest(id),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      backgroundColor: const Color(0xFF6C63FF),
+                    ),
+                    child: const Text('批准', style: TextStyle(fontSize: 12, color: Colors.white)),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
@@ -141,6 +278,44 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
               onRefresh: _loadData,
               child: ListView(
                 children: [
+                  // ===== 新的请求区域（参照 Web 前端） =====
+                  if (_requests.isNotEmpty || true) ...[
+                    InkWell(
+                      onTap: () => setState(() => _requestsExpanded = !_requestsExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Row(
+                          children: [
+                            AnimatedRotation(
+                              turns: _requestsExpanded ? 0.25 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red),
+                            ),
+                            const SizedBox(width: 4),
+                            const Text('新的请求', style: TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.w500)),
+                            const Spacer(),
+                            if (_requests.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                                child: Text('${_requests.length}', style: const TextStyle(fontSize: 11, color: Colors.white)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_requestsExpanded) ...[
+                      if (_requests.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: Text('暂无新的请求', style: TextStyle(color: Colors.grey, fontSize: 13))),
+                        )
+                      else
+                        ..._requests.map((req) => _buildRequestItem(req)),
+                      const Divider(height: 1),
+                    ],
+                  ],
+
                   // ===== 群聊区域（可折叠） =====
                   if (_groups.isNotEmpty || true) ...[
                     InkWell(
