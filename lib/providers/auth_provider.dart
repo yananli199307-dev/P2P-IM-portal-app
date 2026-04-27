@@ -86,8 +86,11 @@ class AuthProvider extends ChangeNotifier {
       _token = await _apiService.login(portalUrl, password);
       _portalUrl = portalUrl;
       _isInitialized = true;
+      // 动态设置 API 地址：手机直连，Web 走代理
+      if (!kIsWeb) {
+        ApiService().updateBaseUrl('$portalUrl/api');
+      }
       // 保存 portalUrl
-      final prefs = await _apiService.getPortalUrl();
       await _apiService.setPortalUrl(portalUrl);
       _user = await _apiService.getMe();
       _isLoading = false;

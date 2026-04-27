@@ -51,6 +51,12 @@ class ApiService {
     await prefs.setString('portal_url', url);
   }
 
+  /// 更新 API 基地址（用于手机切换 Portal）
+  void updateBaseUrl(String newBaseUrl) {
+    baseUrl = newBaseUrl;
+    _dio.options.baseUrl = newBaseUrl;
+  }
+
   Future<String?> getPortalUrl() async {
     if (_portalUrl != null) return _portalUrl;
     final prefs = await SharedPreferences.getInstance();

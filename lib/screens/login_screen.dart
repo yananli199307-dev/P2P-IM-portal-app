@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,32 +12,43 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _portalUrlController = TextEditingController();
+  final _urlController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Web 测试时默认填 agentp2p.cn
+    if (kIsWeb) {
+      _urlController.text = 'https://agentp2p.cn';
+    }
+  }
+
+  @override
   void dispose() {
-    _portalUrlController.dispose();
+    _urlController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  String _normalizeUrl(String url) {
+    url = url.trim();
+    if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+    return url;
   }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.login(
-      _portalUrlController.text.trim(),
-      _passwordController.text,
-    );
+    final portalUrl = _normalizeUrl(_urlController.text);
+    final password = _passwordController.text;
 
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error ?? '登录失败')),
-      );
-    }
+    await context.read<AuthProvider>().login(portalUrl, password);
   }
 
   @override
@@ -44,153 +57,114 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(
-                  Icons.chat_bubble_outline,
-                  size: 80,
-                  color: Color(0xFF6C63FF),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Agent Portal',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Logo / 标题
+                  const Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFF6C63FF)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Agent P2P',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF)),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'P2P 安全通讯',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
+                  const SizedBox(height: 8),
+                  Text(
+                    '去中心化安全通讯',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-                TextFormField(
-                  controller: _portalUrlController,
-                  decoration: const InputDecoration(
-                    labelText: '你的 Portal 地址',
-                    hintText: 'https://your-portal.com',
-                    prefixIcon: Icon(Icons.link),
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 48),
+
+                  // Portal URL
+                  TextFormField(
+                    controller: _urlController,
+                    decoration: InputDecoration(
+                      labelText: 'Portal 地址',
+                      hintText: 'https://your-domain.com',
+                      prefixIcon: const Icon(Icons.link),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    keyboardType: TextInputType.url,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return '请输入 Portal 地址';
+                      return null;
+                    },
                   ),
-                  keyboardType: TextInputType.url,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '请输入 Portal 地址';
-                    }
-                    if (!value.startsWith('http')) {
-                      return '地址必须以 http:// 或 https:// 开头';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: '密码',
-                    prefixIcon: const Icon(Icons.lock),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                  const SizedBox(height: 16),
+
+                  // 密码
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: '密码',
+                      hintText: '输入密码',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onFieldSubmitted: (_) => _login(),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return '请输入密码';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 登录按钮
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: authProvider.isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: authProvider.isLoading
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('登录', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '请输入密码';
-                    }
-                    if (value.length < 6) {
-                      return '密码至少6位';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: authProvider.isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: const Color(0xFF6C63FF),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: authProvider.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('登录', style: TextStyle(fontSize: 16)),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.info_outline, 
-                            size: 16, 
-                            color: Colors.grey[600]
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '提示',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                  const SizedBox(height: 16),
+
+                  // 错误提示
+                  if (authProvider.error != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Portal 地址就是你的身份标识',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
+                      child: Text(
+                        authProvider.error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
                       ),
-                      Text(
-                        '例如：https://agentp2p.cn',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                    ),
+
+                  const SizedBox(height: 32),
+
+                  // 提示
+                  Text(
+                    kIsWeb
+                        ? 'Web 测试模式：通过本地代理连接 Portal'
+                        : '输入你的 Portal 地址和密码即可登录',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
