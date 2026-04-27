@@ -1,4 +1,5 @@
 import 'dart:math';
+import "package:flutter/foundation.dart" show kIsWeb;
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
@@ -12,9 +13,8 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Portal 地址，默认为当前域名（Web模式）
-  // 在 Flutter App 中运行时应该从配置读取
-  static String baseUrl = '/api';
+  // Portal 地址：Web 走本地代理（8080），手机直连
+  static String baseUrl = kIsWeb ? 'http://localhost:8080/api' : '/api';
   
   late Dio _dio;
   String? _token;
