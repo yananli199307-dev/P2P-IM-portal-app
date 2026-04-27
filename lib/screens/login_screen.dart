@@ -20,10 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Web 测试时默认填 agentp2p.cn
-    if (kIsWeb) {
-      _urlController.text = 'https://agentp2p.cn';
-    }
   }
 
   @override
