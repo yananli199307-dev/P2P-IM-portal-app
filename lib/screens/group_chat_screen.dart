@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import "package:provider/provider.dart";
+import "../providers/chat_provider.dart";
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/group.dart';
@@ -140,6 +142,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         replyToSenderName: reply?.isFromOwner == true ? '群主' : (reply?.senderName ?? '成员'),
       );
       if (mounted) setState(() => _replyTarget = null);
+      // 更新消息列表排序
+      context.read<ChatProvider>().updateGroupLastMessage(widget.group.id, content);
       _shouldScrollToBottom = true;
       _loadMessages();
     } catch (e) {

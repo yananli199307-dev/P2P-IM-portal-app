@@ -21,8 +21,22 @@ class ChatProvider extends ChangeNotifier {
   Map<int, int> _unreadCounts = {};
   int _totalUnreadCount = 0;
   
+  // 最后消息时间（key: "contact_1" 或 "group_2"）
+  Map<String, DateTime> _lastMessageTime = {};
+  // 最后消息内容预览
+  Map<String, String> _lastMessagePreview = {};
+  
   Map<int, int> get unreadCounts => _unreadCounts;
   int get totalUnreadCount => _totalUnreadCount;
+  Map<String, DateTime> get lastMessageTime => _lastMessageTime;
+  Map<String, String> get lastMessagePreview => _lastMessagePreview;
+
+  /// 更新最后消息时间（群聊）
+  void updateGroupLastMessage(int groupId, String content) {
+    _lastMessageTime['group_$groupId'] = DateTime.now();
+    _lastMessagePreview['group_$groupId'] = content;
+    notifyListeners();
+  }
 
   List<Contact> get contacts => _contacts;
   List<Message> get messages => _messages;
@@ -91,6 +105,13 @@ class ChatProvider extends ChangeNotifier {
   void _handleNewMessage(Map<String, dynamic> data) {
     try {
       final newMessage = Message.fromJson(data);
+      
+      // 更新最后消息时间
+      if (newMessage.contactId != null) {
+        _lastMessageTime['contact_${newMessage.contactId}'] = newMessage.createdAt;
+        _lastMessagePreview['contact_${newMessage.contactId}'] = newMessage.content;
+        notifyListeners();
+      }
       
       // 如果当前正在查看该联系人，添加到消息列表并标记已读
       if (newMessage.contactId == _selectedContact?.id) {
@@ -210,6 +231,10 @@ class ChatProvider extends ChangeNotifier {
       
       // 同时通过 WebSocket 发送（用于实时通知）
       _wsService.sendTextMessage(_selectedContact!.id, content);
+      
+      // 更新最后消息时间
+      _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
+      _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
       
       _error = null;
     } catch (e) {
