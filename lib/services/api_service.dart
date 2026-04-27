@@ -257,11 +257,10 @@ class ApiService {
   }
 
   /// 更新联系人（备注名等）
-  Future<void> updateContact(int contactId, String portalUrl, String note) async {
+  Future<void> updateContact(int contactId, {String? note, bool? isFavorite}) async {
     await _dio.put('/contacts/$contactId', data: {
-      'portal_url': portalUrl,
-      'note': note,
-      'display_name': 'temp',  // 保持原名
+      if (note != null) 'note': note,
+      if (isFavorite != null) 'is_favorite': isFavorite,
     });
   }
 

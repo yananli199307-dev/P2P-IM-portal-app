@@ -36,7 +36,7 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
 
   void _saveNote() async {
     try {
-      await ApiService().updateContact(widget.contact.id, widget.contact.portalUrl, _noteController.text);
+      await ApiService().updateContact(widget.contact.id, note: _noteController.text);
       setState(() {
         _note = _noteController.text;
         _isEditing = false;
