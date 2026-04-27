@@ -256,6 +256,15 @@ class ApiService {
     await _dio.delete('/contacts/$contactId');
   }
 
+  /// 更新联系人（备注名等）
+  Future<void> updateContact(int contactId, String portalUrl, String note) async {
+    await _dio.put('/contacts/$contactId', data: {
+      'portal_url': portalUrl,
+      'note': note,
+      'display_name': 'temp',  // 保持原名
+    });
+  }
+
   // ========== 群组 ==========
 
   // 获取群组列表

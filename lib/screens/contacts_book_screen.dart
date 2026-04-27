@@ -6,6 +6,7 @@ import "../providers/auth_provider.dart";
 import '../models/contact.dart';
 import '../models/group.dart';
 import 'chat_detail_screen.dart';
+import 'contact_detail_screen.dart';
 import 'group_chat_screen.dart';
 import 'agent_chat_screen.dart';
 
@@ -434,10 +435,9 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
                               )
                             : null,
                         onTap: () {
-                          chatProvider.selectContact(contact);
                           Navigator.push(context, MaterialPageRoute(
-                            builder: (_) => ChatDetailScreen(key: ValueKey('book_${contact.id}')),
-                          ));
+                            builder: (_) => ContactDetailScreen(contact: contact),
+                          )).then((_) => _loadData()); // 返回后刷新
                         },
                       ),
                     );
