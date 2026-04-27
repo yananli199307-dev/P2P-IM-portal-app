@@ -38,6 +38,27 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 从后端加载最新消息时间（用于列表排序）
+  Future<void> loadLatestMessages() async {
+    try {
+      final latest = await _apiService.getLatestMessages();
+      for (final item in latest) {
+        final time = DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now();
+        final content = item['content'] ?? '';
+        if (item['contact_id'] != null) {
+          _lastMessageTime['contact_${item['contact_id']}'] = time;
+          _lastMessagePreview['contact_${item['contact_id']}'] = content;
+        } else if (item['group_id'] != null) {
+          _lastMessageTime['group_${item['group_id']}'] = time;
+          _lastMessagePreview['group_${item['group_id']}'] = content;
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('loadLatestMessages: $e');
+    }
+  }
+
   List<Contact> get contacts => _contacts;
   List<Message> get messages => _messages;
   Contact? get selectedContact => _selectedContact;

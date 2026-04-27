@@ -234,6 +234,12 @@ class ApiService {
         .toList();
   }
 
+  /// 获取所有聊天的最新消息（用于消息列表排序）
+  Future<List<Map<String, dynamic>>> getLatestMessages() async {
+    final response = await _dio.get('/messages/latest');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
   // 标记消息为已读
   Future<void> markMessageAsRead(int messageId) async {
     await _dio.post('/messages/$messageId/read');
