@@ -1,0 +1,18 @@
+# Flutter build output
+build/
+.dart_tool/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+.packages
+.pub-cache/
+
+# Local config
+*.local

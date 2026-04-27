@@ -5,7 +5,7 @@ class Group {
   final int ownerId;
   final List<int> memberIds;
   final int memberCount;
-  final bool isOwner;  // 当前用户是否是群主
+  final bool isOwner;
   final DateTime createdAt;
   final String? groupUuid;  // 用于成员获取消息
   final String? ownerName;  // 群主名称
@@ -26,6 +26,8 @@ class Group {
   factory Group.fromJson(Map<String, dynamic> json) {
     final memberIds = List<int>.from(json['member_ids'] ?? []);
     final memberCount = json['member_count'] ?? memberIds.length;
+    // 检测群主：API 不返回 is_owner，从 UUID 判断（含自己域名即为群主）
+    final isOwner = json['is_owner'] ?? (json['group_id']?.contains('agentp2p') ?? false);
     return Group(
       id: json['id'],
       name: json['name'],
@@ -33,7 +35,7 @@ class Group {
       ownerId: json['owner_id'],
       memberIds: memberIds,
       memberCount: memberCount,
-      isOwner: json['is_owner'] ?? false,
+      isOwner: isOwner,
       createdAt: DateTime.parse(json['created_at']),
       groupUuid: json['group_id'] ?? json['group_uuid'],
       ownerName: json['owner_name'],

@@ -85,6 +85,10 @@ class AuthProvider extends ChangeNotifier {
     try {
       _token = await _apiService.login(portalUrl, password);
       _portalUrl = portalUrl;
+      _isInitialized = true;
+      // 保存 portalUrl
+      final prefs = await _apiService.getPortalUrl();
+      await _apiService.setPortalUrl(portalUrl);
       _user = await _apiService.getMe();
       _isLoading = false;
       notifyListeners();

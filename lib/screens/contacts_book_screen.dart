@@ -6,6 +6,7 @@ import '../models/contact.dart';
 import '../models/group.dart';
 import 'chat_detail_screen.dart';
 import 'group_chat_screen.dart';
+import 'agent_chat_screen.dart';
 
 class ContactsBookScreen extends StatefulWidget {
   const ContactsBookScreen({super.key});
@@ -194,13 +195,17 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
                   // ===== 联系人区域 =====
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Row(
-                      children: [
-                        const Text('联系人', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
-                        const Spacer(),
-                        Text('${contacts.length} 位', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
+                    child: const Text('联系人', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
+                  ),
+                  // My Agent 固定入口（参照 Web 前端）
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFF6C63FF),
+                      child: Text('🤖', style: TextStyle(fontSize: 20)),
                     ),
+                    title: const Text('My Agent'),
+                    subtitle: const Text('AI 助手', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgentChatScreen())),
                   ),
                   if (contacts.isEmpty)
                     const Padding(
@@ -210,7 +215,38 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
                   else
                     ...contacts.map((contact) {
                       final unreadCount = chatProvider.unreadCounts[contact.id] ?? 0;
-                      return ListTile(
+                      return Dismissible(
+                        key: ValueKey('del_${contact.id}'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          color: Colors.red,
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        confirmDismiss: (_) => showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('删除联系人'),
+                            content: Text('确定删除 ${contact.displayName} 吗？\n聊天记录将被清除。'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除', style: TextStyle(color: Colors.red))),
+                            ],
+                          ),
+                        ).then((confirmed) async {
+                          if (confirmed == true) {
+                            try {
+                              await ApiService().deleteContact(contact.id);
+                              chatProvider.removeContact(contact.id);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已删除 ${contact.displayName}')));
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+                            }
+                          }
+                          return false;
+                        }),
+                        child: ListTile(
                         leading: CircleAvatar(child: Text((contact.displayName ?? contact.portalUrl ?? '?')[0].toUpperCase())),
                         title: Text(contact.displayName ?? contact.portalUrl ?? '未知'),
                         subtitle: Text(contact.portalUrl ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis),
@@ -227,7 +263,8 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
                             builder: (_) => ChatDetailScreen(key: ValueKey('book_${contact.id}')),
                           ));
                         },
-                      );
+                      ),
+                    );
                     }),
                 ],
               ),

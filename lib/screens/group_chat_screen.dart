@@ -120,7 +120,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (content.isEmpty) return;
     _messageController.clear();
     try {
-      await ApiService().sendGroupMessage(widget.group.id, content);
+      await ApiService().sendGroupMessage(
+        widget.group.id, content,
+        groupUuid: widget.group.groupUuid,
+        isOwner: widget.group.isOwner,
+      );
       _shouldScrollToBottom = true;
       _loadMessages();
     } catch (e) {
@@ -132,12 +136,19 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
       if (result == null || result.files.isEmpty) return;
-      final filePath = result.files.first.path;
-      if (filePath == null) return;
+      final file = result.files.first;
       setState(() => _isSendingFile = true);
-      await ApiService().sendGroupFileMessage(widget.group.id, filePath);
-      setState(() => _isSendingFile = false);
+      if (file.path != null) {
+        await ApiService().sendGroupFileMessage(widget.group.id, file.path!, groupUuid: widget.group.groupUuid, isOwner: widget.group.isOwner);
+      } else if (file.bytes != null) {
+        final fileData = await ApiService().uploadFileBytes(file.name, file.bytes!);
+        await ApiService().sendGroupMessage(widget.group.id, '📎 ' + file.name,
+          groupUuid: widget.group.groupUuid, isOwner: widget.group.isOwner,
+          messageType: fileData["file_type"] == 'image' ? 'image' : 'file',
+          fileUrl: fileData["file_url"], fileName: file.name, fileSize: fileData["file_size"]);
+      }
       _shouldScrollToBottom = true;
+      setState(() => _isSendingFile = false);
       _loadMessages();
     } catch (e) {
       setState(() => _isSendingFile = false);

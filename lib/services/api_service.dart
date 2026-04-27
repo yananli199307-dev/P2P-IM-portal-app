@@ -131,12 +131,16 @@ class ApiService {
         .toList();
   }
 
-  Future<Contact> addContact(String name, String portalUrl) async {
-    final response = await _dio.post('/contacts', data: {
-      'display_name': name,
-      'portal_url': portalUrl,
+  /// 发送添加联系人申请（和 Web 前端一致，等对方同意后才创建）
+  Future<void> addContact(String name, String portalUrl) async {
+    final sharedKey = 'sk_${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}${List.generate(8, (_) => (Random().nextDouble() * 36).toInt().toRadixString(36)).join()}';
+    await _dio.post('/contact-requests/apply', data: {
+      'target_portal': portalUrl,
+      'requester_name': name,
+      'requester_portal': _portalUrl ?? '',
+      'shared_key': sharedKey,
+      'message': '',
     });
-    return Contact.fromJson(response.data);
   }
 
   // ========== 联系人请求 ==========
@@ -197,14 +201,6 @@ class ApiService {
     return response.data;
   }
 
-  // ========== 会话列表 ==========
-  
-  /// 获取所有会话（私聊+群聊），按最新消息排序
-  Future<List<Map<String, dynamic>>> getConversations() async {
-    final response = await _dio.get('/messages/conversations');
-    return List<Map<String, dynamic>>.from(response.data);
-  }
-
   // ========== 消息 ==========
   
   Future<List<Message>> getMessages(int contactId, {int limit = 50}) async {
@@ -237,6 +233,11 @@ class ApiService {
   // 标记消息为已读
   Future<void> markMessageAsRead(int messageId) async {
     await _dio.post('/messages/$messageId/read');
+  }
+
+  /// 删除联系人
+  Future<void> deleteContact(int contactId) async {
+    await _dio.delete('/contacts/$contactId');
   }
 
   // ========== 群组 ==========
@@ -301,26 +302,21 @@ class ApiService {
   }
 
   // 发送群消息
-  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text', String? fileUrl, String? fileName, int? fileSize}) async {
-    final data = {
-      'group_id': groupId,
-      'content': content,
-      'message_type': messageType,
-    };
-    if (fileUrl != null) data['file_url'] = fileUrl;
-    if (fileName != null) data['file_name'] = fileName;
-    if (fileSize != null) data['file_size'] = fileSize;
+  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text', String? fileUrl, String? fileName, int? fileSize, String? groupUuid, bool isOwner = false}) async {
+    final Map<String, dynamic> body = {'content': content, 'message_type': messageType};
+    if (fileUrl != null) body['file_url'] = fileUrl;
+    if (fileName != null) body['file_name'] = fileName;
+    if (fileSize != null) body['file_size'] = fileSize;
     
-    final response = await _dio.post(
-      '/messages/group',
-      data: data,
-      options: Options(
-        headers: {
-          'X-Sender-Portal': _portalUrl ?? '',
-        },
-      ),
-    );
-    return response.data;
+    // 和 Web 前端一致：群主用 dbId/messages/p2p，成员用 UUID
+    if (isOwner) {
+      final response = await _dio.post('/groups/$groupId/messages/p2p', data: body);
+      return response.data;
+    } else {
+      final uuid = groupUuid ?? groupId.toString();
+      final response = await _dio.post('/groups/by-uuid/$uuid/messages/send', data: body);
+      return response.data;
+    }
   }
 
   // ========== 文件上传 ==========
@@ -331,12 +327,16 @@ class ApiService {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath, filename: fileName),
     });
+    final response = await _dio.post('/files/upload', data: formData);
+    return response.data;
+  }
 
-    final response = await _dio.post(
-      '/files/upload',
-      data: formData,
-    );
-
+  /// 上传文件（Web 版，使用 bytes）
+  Future<Map<String, dynamic>> uploadFileBytes(String fileName, dynamic bytes) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+    });
+    final response = await _dio.post('/files/upload', data: formData);
     return response.data;
   }
 
@@ -401,16 +401,23 @@ class ApiService {
   }
 
   /// 发送群文件消息
-  Future<Map<String, dynamic>> sendGroupFileMessage(int groupId, String filePath) async {
+  Future<Map<String, dynamic>> sendGroupFileMessage(int groupId, String filePath, {String? groupUuid, bool isOwner = false}) async {
     final fileData = await uploadFile(filePath);
-    final response = await _dio.post('/messages/group/$groupId', data: {
+    final body = {
       'content': '📎 ${fileData['file_name']}',
       'message_type': fileData['file_type'] == 'image' ? 'image' : 'file',
       'file_url': fileData['file_url'],
       'file_name': fileData['file_name'],
       'file_size': fileData['file_size'],
-    });
-    return response.data;
+    };
+    if (isOwner) {
+      final response = await _dio.post('/groups/$groupId/messages/p2p', data: body);
+      return response.data;
+    } else {
+      final uuid = groupUuid ?? groupId.toString();
+      final response = await _dio.post('/groups/by-uuid/$uuid/messages/send', data: body);
+      return response.data;
+    }
   }
 
   /// 修改群名称

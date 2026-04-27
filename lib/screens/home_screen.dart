@@ -1,3 +1,4 @@
+import "package:flutter/foundation.dart";
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -29,9 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
     
     if (authProvider.user != null && authProvider.portalUrl != null) {
       // 初始化 WebSocket 连接
+      // WebSocket：Web 走代理，手机直连 Portal
+      final wsBaseUrl = kIsWeb ? 'http://localhost:8081' : authProvider.portalUrl!;
       await chatProvider.initWebSocket(
-        baseUrl: authProvider.portalUrl!,
+        baseUrl: wsBaseUrl,
         userId: authProvider.user!.id.toString(),
+        apiKey: authProvider.token!,
       );
       // 加载联系人
       chatProvider.loadContacts();

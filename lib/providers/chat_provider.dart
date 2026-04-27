@@ -35,13 +35,14 @@ class ChatProvider extends ChangeNotifier {
   Future<void> initWebSocket({
     required String baseUrl,
     required String userId,
+    required String apiKey,
   }) async {
     _baseUrl = baseUrl;
     _userId = userId;
     
     await _wsService.connect(
       baseUrl: baseUrl,
-      token: userId,
+      token: apiKey,
       onMessage: _handleWebSocketMessage,
       onConnect: () {
         _isConnected = true;
@@ -131,8 +132,9 @@ class ChatProvider extends ChangeNotifier {
   /// 添加联系人
   Future<void> addContact(String name, String portalUrl) async {
     try {
-      final contact = await _apiService.addContact(name, portalUrl);
-      _contacts.add(contact);
+      await _apiService.addContact(name, portalUrl);
+      // 申请已发送，等对方同意后刷新联系人
+      await loadContacts();
       notifyListeners();
     } catch (e) {
       _error = e.toString();
@@ -157,6 +159,14 @@ class ChatProvider extends ChangeNotifier {
       orElse: () => _contacts.first,
     );
     selectContact(contact);
+  }
+
+  /// 删除联系人（从本地列表移除）
+  void removeContact(int contactId) {
+    _contacts.removeWhere((c) => c.id == contactId);
+    _unreadCounts.remove(contactId);
+    _totalUnreadCount = _unreadCounts.values.fold(0, (sum, count) => sum + count);
+    notifyListeners();
   }
 
   /// 加载消息历史
@@ -277,17 +287,34 @@ class ChatProvider extends ChangeNotifier {
       final message = await _apiService.sendFileMessage(_selectedContact!.id, filePath);
       _messages.add(message);
       notifyListeners();
-      
-      // 滚动到底部
-      Future.delayed(const Duration(milliseconds: 100), () {
-        // 触发滚动
-      });
     } catch (e) {
-      _error = '发送文件失败: $e';
+      _error = e.toString();
       notifyListeners();
-      if (kDebugMode) {
-        print('[ChatProvider] Error sending file: $e');
-      }
+    }
+  }
+
+  /// 发送文件（Web 版，使用 bytes）
+  Future<void> sendFileBytes(String fileName, List<int> bytes) async {
+    if (_selectedContact == null) return;
+    try {
+      final fileData = await _apiService.uploadFileBytes(fileName, bytes);
+      // 构建文件消息
+      final message = Message(
+        id: DateTime.now().millisecondsSinceEpoch,
+        contactId: _selectedContact!.id,
+        content: '📎 $fileName',
+        type: fileData['file_type'] == 'image' ? MessageType.image : MessageType.file,
+        fileUrl: fileData['file_url'],
+        fileName: fileName,
+        fileSize: fileData['file_size'],
+        isFromMe: true,
+        createdAt: DateTime.now(),
+      );
+      _messages.add(message);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
     }
   }
 

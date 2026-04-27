@@ -65,11 +65,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
       if (result == null || result.files.isEmpty) return;
-
-      final filePath = result.files.first.path;
-      if (filePath == null) return;
-
-      await context.read<ChatProvider>().sendFileMessage(filePath);
+      final file = result.files.first;
+      
+      if (file.path != null) {
+        // 移动端：有本地路径
+        await context.read<ChatProvider>().sendFileMessage(file.path!);
+      } else if (file.bytes != null) {
+        // Web 端：用 bytes 上传
+        await context.read<ChatProvider>().sendFileBytes(file.name, file.bytes!);
+      }
       _shouldScrollToBottom = true;
       _scrollToBottom();
     } catch (e) {

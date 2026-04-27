@@ -65,7 +65,7 @@ class WebSocketService {
       wsUrl = wsUrl.replaceAll('/api', '');
       
       // 添加 WebSocket 路径
-      final path = _isAgent ? '/ws/agent' : '/ws';
+      final path = _isAgent ? '/ws/agent' : '/ws/agent';
       wsUrl = '$wsUrl$path?token=$_token';
       
       if (kDebugMode) {
