@@ -152,8 +152,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                 : null,
                             onTap: () {
                               if (item.isGroup) {
-                                // 更新群聊最后消息时间
-                                provider.updateGroupLastMessage(item.id, item.preview);
                                 Navigator.push(context, MaterialPageRoute(
                                   builder: (_) => GroupChatScreen(group: item.group!),
                                 ));
