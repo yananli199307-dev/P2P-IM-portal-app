@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (authProvider.user != null && authProvider.portalUrl != null) {
       // 初始化 WebSocket 连接
       // WebSocket：Web 走代理，手机直连 Portal
-      final wsBaseUrl = kIsWeb ? 'http://localhost:8081' : authProvider.portalUrl!;
+      final wsBaseUrl = kIsWeb ? 'http://localhost:8080' : authProvider.portalUrl!;
       await chatProvider.initWebSocket(
         baseUrl: wsBaseUrl,
         userId: authProvider.user!.id.toString(),
