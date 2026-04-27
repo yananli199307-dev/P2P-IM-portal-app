@@ -16,6 +16,9 @@ class GroupMessage {
   final String? fileName;
   final int? fileSize;
   final String messageType;
+  final int? replyToMessageId;
+  final String? replyToContent;
+  final String? replyToSenderName;
 
   GroupMessage({
     required this.id,
@@ -27,6 +30,9 @@ class GroupMessage {
     this.fileName,
     this.fileSize,
     this.messageType = 'text',
+    this.replyToMessageId,
+    this.replyToContent,
+    this.replyToSenderName,
   });
 
   factory GroupMessage.fromJson(Map<String, dynamic> json) {
@@ -40,6 +46,9 @@ class GroupMessage {
       fileName: json['file_name'],
       fileSize: json['file_size'],
       messageType: json['message_type'] ?? 'text',
+      replyToMessageId: json['reply_to_message_id'],
+      replyToContent: json['reply_to_content'],
+      replyToSenderName: json['reply_to_sender_name'],
     );
   }
 }
@@ -59,6 +68,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   bool _isLoading = true;
   bool _isSendingFile = false;
   bool _shouldScrollToBottom = true;
+  GroupMessage? _replyTarget;
 
   @override
   void initState() {
@@ -118,13 +128,18 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
+    final reply = _replyTarget;
     _messageController.clear();
     try {
       await ApiService().sendGroupMessage(
         widget.group.id, content,
         groupUuid: widget.group.groupUuid,
         isOwner: widget.group.isOwner,
+        replyToMessageId: reply?.id,
+        replyToContent: reply != null ? (reply.content.length > 50 ? '${reply.content.substring(0, 50)}...' : reply.content) : null,
+        replyToSenderName: reply?.isFromOwner == true ? '群主' : (reply?.senderName ?? '成员'),
       );
+      if (mounted) setState(() => _replyTarget = null);
       _shouldScrollToBottom = true;
       _loadMessages();
     } catch (e) {
@@ -246,7 +261,29 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       );
     }
 
-    return Padding(
+    // 回复预览
+    Widget? replyPreview;
+    if (message.replyToMessageId != null) {
+      replyPreview = Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 2, height: 12, color: const Color(0xFF6C63FF)),
+          const SizedBox(width: 4),
+          Text(message.replyToSenderName ?? '成员', style: TextStyle(fontSize: 11, color: isMe ? Colors.blue[800] : Colors.grey[600], fontWeight: FontWeight.w500)),
+          const SizedBox(width: 4),
+          Flexible(child: Text(message.replyToContent ?? '', style: TextStyle(fontSize: 11, color: Colors.grey[500]), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        ]),
+      );
+    }
+
+    return GestureDetector(
+      onLongPress: () {
+        showModalBottomSheet(context: context, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.reply, color: Color(0xFF6C63FF)), title: const Text('回复'), onTap: () { setState(() => _replyTarget = message); Navigator.pop(context); }),
+          ListTile(leading: const Icon(Icons.copy, color: Colors.grey), title: const Text('复制'), onTap: () { Navigator.pop(context); }),
+        ])));
+      },
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -264,6 +301,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Text(message.senderName, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ),
+                if (replyPreview != null) replyPreview,
                 content,
                 const SizedBox(height: 2),
                 Text(time, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
@@ -272,6 +310,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -382,6 +421,25 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     ));
   }
 
+  Widget _buildReplyBar() {
+    if (_replyTarget == null) return const SizedBox.shrink();
+    final target = _replyTarget!;
+    final name = target.isFromOwner ? '群主' : target.senderName;
+    return Container(
+      color: Colors.grey[100],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(children: [
+        Container(width: 3, height: 32, color: const Color(0xFF6C63FF)),
+        const SizedBox(width: 8),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(name, style: const TextStyle(fontSize: 12, color: Color(0xFF6C63FF), fontWeight: FontWeight.w600)),
+          Text(target.content, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ])),
+        IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => setState(() => _replyTarget = null), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -403,6 +461,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   itemBuilder: (context, index) => _buildItem(index),
                 ),
         ),
+        if (_replyTarget != null) _buildReplyBar(),
         if (_isSendingFile) const LinearProgressIndicator(),
         Container(
           padding: const EdgeInsets.all(8),
