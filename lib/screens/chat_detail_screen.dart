@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/chat_provider.dart';
 import '../models/message.dart';
 import 'package:intl/intl.dart';
+import '../helpers/file_icon_helper.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -269,7 +270,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.attach_file, color: isMe ? Colors.white : Colors.black87),
+            Icon(FileIconHelper.getIcon(message.fileName), color: FileIconHelper.getColor(message.fileName)),
             const SizedBox(width: 8),
             Flexible(
               child: Column(

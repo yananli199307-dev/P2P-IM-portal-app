@@ -5,6 +5,7 @@ import "../providers/chat_provider.dart";
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/group.dart';
+import '../helpers/file_icon_helper.dart';
 import 'invite_member_screen.dart';
 import 'group_members_screen.dart';
 
@@ -246,7 +247,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.attach_file),
+            Icon(FileIconHelper.getIcon(message.fileName), color: FileIconHelper.getColor(message.fileName)),
             const SizedBox(width: 8),
             Flexible(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
