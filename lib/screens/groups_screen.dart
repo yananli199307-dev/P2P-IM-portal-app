@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/group.dart';
+import "package:provider/provider.dart";
+import "../providers/auth_provider.dart";
 import 'group_chat_screen.dart';
 
 class GroupsScreen extends StatefulWidget {
@@ -24,7 +26,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
     try {
       final groupsData = await ApiService().getGroups();
       setState(() {
-        _groups = groupsData.map((g) => Group.fromJson(g)).toList();
+        _groups = groupsData.map((g) => Group.fromJson(g, ownerPortal: context.read<AuthProvider>().portalUrl)).toList();
         _isLoading = false;
       });
     } catch (e) {

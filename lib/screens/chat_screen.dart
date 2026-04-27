@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../services/api_service.dart';
+import "../providers/auth_provider.dart";
 import '../models/group.dart';
 import '../models/contact.dart';
 import 'chat_detail_screen.dart';
@@ -50,7 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final groupsData = await ApiService().getGroups();
       if (!mounted) return;
       setState(() {
-        _groups = groupsData.map((g) => Group.fromJson(g)).toList();
+        _groups = groupsData.map((g) => Group.fromJson(g, ownerPortal: context.read<AuthProvider>().portalUrl)).toList();
         _isLoading = false;
       });
     } catch (e) {

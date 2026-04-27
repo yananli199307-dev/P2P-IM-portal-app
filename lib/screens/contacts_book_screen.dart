@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/chat_provider.dart';
+import "../providers/auth_provider.dart";
 import '../models/contact.dart';
 import '../models/group.dart';
 import 'chat_detail_screen.dart';
@@ -41,7 +42,7 @@ class _ContactsBookScreenState extends State<ContactsBookScreen> {
       ]);
       if (!mounted) return;
       setState(() {
-        _groups = (results[0] as List).map((g) => Group.fromJson(g)).toList();
+        _groups = (results[0] as List).map((g) => Group.fromJson(g, ownerPortal: context.read<AuthProvider>().portalUrl)).toList();
         _isLoading = false;
       });
     } catch (e) {

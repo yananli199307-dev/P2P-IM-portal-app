@@ -25,7 +25,7 @@ class Group {
     this.ownerPortal,
   });
 
-  factory Group.fromJson(Map<String, dynamic> json) {
+  factory Group.fromJson(Map<String, dynamic> json, {String? ownerPortal}) {
     final memberIds = List<int>.from(json['member_ids'] ?? []);
     final memberCount = json['member_count'] ?? memberIds.length;
     // 检测群主：API 不返回 is_owner，从 UUID 判断（含自己域名即为群主）
@@ -41,7 +41,7 @@ class Group {
       createdAt: DateTime.parse(json['created_at']),
       groupUuid: json['group_id'] ?? json['group_uuid'],
       ownerName: json['owner_name'],
-      ownerPortal: json['owner_portal'],
+      ownerPortal: json['owner_portal'] ?? ownerPortal,
     );
   }
 
