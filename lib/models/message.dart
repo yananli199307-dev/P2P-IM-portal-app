@@ -22,6 +22,9 @@ class Message {
   final int? fileSize;
   final bool isFromMe;
   final bool isRead;
+  final int? replyToMessageId;  // 被回复的消息 ID
+  final String? replyToContent;  // 被回复的消息内容摘要
+  final String? replyToSenderName;  // 被回复者名称
   final DateTime createdAt;
 
   Message({
@@ -35,6 +38,9 @@ class Message {
     this.fileSize,
     required this.isFromMe,
     this.isRead = false,
+    this.replyToMessageId,
+    this.replyToContent,
+    this.replyToSenderName,
     required this.createdAt,
   });
 
@@ -50,6 +56,9 @@ class Message {
       fileSize: json['file_size'],
       isFromMe: json['is_from_owner'] ?? false,
       isRead: json['is_read'] ?? false,
+      replyToMessageId: json['reply_to_message_id'],
+      replyToContent: json['reply_to_content'],
+      replyToSenderName: json['reply_to_sender_name'],
       createdAt: DateTime.parse(json['created_at']),
     );
   }

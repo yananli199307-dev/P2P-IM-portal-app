@@ -189,7 +189,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// 发送消息
-  Future<void> sendMessage(String content) async {
+  Future<void> sendMessage(String content, {int? replyToMessageId, String? replyToContent, String? replyToSenderName}) async {
     if (_selectedContact == null) return;
 
     _isLoading = true;
@@ -200,6 +200,9 @@ class ChatProvider extends ChangeNotifier {
       final message = await _apiService.sendMessage(
         _selectedContact!.id,
         content,
+        replyToMessageId: replyToMessageId,
+        replyToContent: replyToContent,
+        replyToSenderName: replyToSenderName,
       );
       
       // 添加到本地消息列表（WebSocket 也会推送，但先添加可以立即显示）

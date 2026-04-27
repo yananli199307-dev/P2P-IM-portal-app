@@ -213,12 +213,16 @@ class ApiService {
         .toList();
   }
 
-  Future<Message> sendMessage(int contactId, String content, {MessageType type = MessageType.text}) async {
-    final response = await _dio.post('/messages', data: {
+  Future<Message> sendMessage(int contactId, String content, {MessageType type = MessageType.text, int? replyToMessageId, String? replyToContent, String? replyToSenderName}) async {
+    final body = {
       'contact_id': contactId,
       'content': content,
       'message_type': type.name,
-    });
+    };
+    if (replyToMessageId != null) body['reply_to_message_id'] = replyToMessageId;
+    if (replyToContent != null) body['reply_to_content'] = replyToContent;
+    if (replyToSenderName != null) body['reply_to_sender_name'] = replyToSenderName;
+    final response = await _dio.post('/messages', data: body);
     return Message.fromJson(response.data);
   }
 
@@ -302,11 +306,14 @@ class ApiService {
   }
 
   // 发送群消息
-  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text', String? fileUrl, String? fileName, int? fileSize, String? groupUuid, bool isOwner = false}) async {
+  Future<Map<String, dynamic>> sendGroupMessage(int groupId, String content, {String messageType = 'text', String? fileUrl, String? fileName, int? fileSize, String? groupUuid, bool isOwner = false, int? replyToMessageId, String? replyToContent, String? replyToSenderName}) async {
     final Map<String, dynamic> body = {'content': content, 'message_type': messageType};
     if (fileUrl != null) body['file_url'] = fileUrl;
     if (fileName != null) body['file_name'] = fileName;
     if (fileSize != null) body['file_size'] = fileSize;
+    if (replyToMessageId != null) body['reply_to_message_id'] = replyToMessageId;
+    if (replyToContent != null) body['reply_to_content'] = replyToContent;
+    if (replyToSenderName != null) body['reply_to_sender_name'] = replyToSenderName;
     
     // 和 Web 前端一致：群主用 dbId/messages/p2p，成员用 UUID
     if (isOwner) {

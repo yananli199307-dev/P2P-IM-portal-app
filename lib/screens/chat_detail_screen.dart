@@ -16,6 +16,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _shouldScrollToBottom = true;
+  Message? _replyTarget;
 
   @override
   void initState() {
@@ -55,7 +56,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
 
-    context.read<ChatProvider>().sendMessage(content);
+    final reply = _replyTarget;
+    if (reply != null) {
+      context.read<ChatProvider>().sendMessage(
+        content,
+        replyToMessageId: reply.id,
+        replyToContent: reply.content.length > 50 ? '${reply.content.substring(0, 50)}...' : reply.content,
+        replyToSenderName: reply.isFromMe ? '我' : (reply.replyToSenderName ?? '对方'),
+      );
+      setState(() => _replyTarget = null);
+    } else {
+      context.read<ChatProvider>().sendMessage(content);
+    }
     _messageController.clear();
     _shouldScrollToBottom = true;
     _scrollToBottom();
@@ -116,9 +128,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         },
                       ),
           ),
+          // 回复引用栏
+          if (_replyTarget != null) _buildReplyBar(),
           _buildInputBar(),
         ],
       ),
+    );
+  }
+
+
+  Widget _buildReplyBar() {
+    if (_replyTarget == null) return const SizedBox.shrink();
+    final target = _replyTarget!;
+    return Container(
+      color: Colors.grey[100],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(children: [
+        Container(width: 3, height: 32, color: const Color(0xFF6C63FF)),
+        const SizedBox(width: 8),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(target.replyToSenderName ?? (target.isFromMe ? '我' : '对方'), style: const TextStyle(fontSize: 12, color: Color(0xFF6C63FF), fontWeight: FontWeight.w600)),
+          Text(target.content, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ])),
+        IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => setState(() => _replyTarget = null), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+      ]),
     );
   }
 
@@ -255,6 +288,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       content = Text(message.content, style: TextStyle(color: isMe ? Colors.white : Colors.black87));
     }
 
+    // 回复预览
+    Widget? replyPreview;
+    if (message.replyToMessageId != null) {
+      replyPreview = Container(
+        padding: const EdgeInsets.only(bottom: 6, left: 4),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 2, height: 14, color: const Color(0xFF6C63FF)),
+          const SizedBox(width: 4),
+          Text(message.replyToSenderName ?? '"对方"', style: TextStyle(fontSize: 11, color: isMe ? Colors.white70 : Colors.grey[600], fontWeight: FontWeight.w500)),
+          const SizedBox(width: 4),
+          Flexible(child: Text(message.replyToContent ?? message.content, style: TextStyle(fontSize: 11, color: isMe ? Colors.white54 : Colors.grey[500]), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        ]),
+      );
+    }
+
+    // 长按回复
+    return GestureDetector(
+      onLongPress: () {
+        showModalBottomSheet(context: context, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.reply, color: Color(0xFF6C63FF)), title: const Text('回复'), onTap: () { setState(() => _replyTarget = message); Navigator.pop(context); }),
+          ListTile(leading: const Icon(Icons.copy, color: Colors.grey), title: const Text('复制'), onTap: () { /* TODO */ Navigator.pop(context); }),
+        ])));
+      },
+      child: _buildAlignedBubble(message, isMe, time, content, replyPreview),
+    );
+  }
+
+  Widget _buildAlignedBubble(Message message, bool isMe, String time, Widget content, Widget? replyPreview) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -268,6 +329,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            if (replyPreview != null) replyPreview,
             content,
             const SizedBox(height: 2),
             Text(time, style: TextStyle(fontSize: 10, color: isMe ? Colors.white70 : Colors.grey[600])),
@@ -276,7 +338,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
     );
   }
-
+  }
   void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -299,4 +361,3 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
   }
-}
