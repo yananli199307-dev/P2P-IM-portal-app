@@ -209,6 +209,12 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 清空当前消息列表
+  void clearMessages() {
+    _messages.clear();
+    notifyListeners();
+  }
+
   /// 删除联系人（从本地列表移除）
   void removeContact(int contactId) {
     _contacts.removeWhere((c) => c.id == contactId);

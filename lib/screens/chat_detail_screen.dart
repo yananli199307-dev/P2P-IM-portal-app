@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../models/message.dart';
 import 'package:intl/intl.dart';
 import '../helpers/file_icon_helper.dart';
+import 'chat_info_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -113,6 +114,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(contact.displayName),
+        actions: [
+          IconButton(icon: const Icon(Icons.info_outline), onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => ChatInfoScreen(contact: contact)));
+          }),
+        ],
       ),
       body: Column(
         children: [
