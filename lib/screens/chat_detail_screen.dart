@@ -115,7 +115,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       appBar: AppBar(
         title: Text(contact.displayName),
         actions: [
-          IconButton(icon: const Icon(Icons.info_outline), onPressed: () {
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => ChatInfoScreen(contact: contact)));
           }),
         ],
