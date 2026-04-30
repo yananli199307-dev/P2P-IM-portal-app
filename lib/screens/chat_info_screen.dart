@@ -20,16 +20,17 @@ class _ChatInfoScreenState extends State<ChatInfoScreen> {
   void initState() {
     super.initState();
     _pinChat = widget.contact.isPinned;
-    _muteNotifications = false;
-    // 从 contact 列表读取最新状态
-    final contact = context.read<ChatProvider>().contacts.firstWhere((c) => c.id == widget.contact.id, orElse: () => widget.contact);
-    _pinChat = contact.isPinned;
   }
 
   void _togglePin(bool v) async {
     try {
       await ApiService().updateContact(widget.contact.id, isPinned: v);
       setState(() => _pinChat = v);
+      // 同步更新 ChatProvider 中的联系人数据
+      if (mounted) {
+        final provider = context.read<ChatProvider>();
+        provider.updateContactPin(widget.contact.id, v);
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
     }

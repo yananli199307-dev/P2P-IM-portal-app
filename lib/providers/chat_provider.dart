@@ -209,6 +209,25 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 更新联系人置顶状态
+  void updateContactPin(int contactId, bool isPinned) {
+    final idx = _contacts.indexWhere((c) => c.id == contactId);
+    if (idx != -1) {
+      _contacts[idx] = Contact(
+        id: _contacts[idx].id,
+        displayName: _contacts[idx].displayName,
+        portalUrl: _contacts[idx].portalUrl,
+        avatar: _contacts[idx].avatar,
+        note: _contacts[idx].note,
+        isFavorite: _contacts[idx].isFavorite,
+        isPinned: isPinned,
+        isActive: _contacts[idx].isActive,
+        createdAt: _contacts[idx].createdAt,
+      );
+      notifyListeners();
+    }
+  }
+
   /// 清空当前消息列表
   void clearMessages() {
     _messages.clear();
