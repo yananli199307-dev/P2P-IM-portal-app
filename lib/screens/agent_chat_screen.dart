@@ -184,7 +184,17 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                       final message = _messages[index];
                       final isMe = message.isFromUser;
                       
-                      return Align(
+                      return GestureDetector(
+                        onLongPress: () async {
+                          final confirm = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('删除消息'), content: const Text('确定删除这条消息吗？'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')), TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除', style: TextStyle(color: Colors.red)))],));
+                          if (confirm == true) {
+                            try {
+                              await ApiService().deleteMessage(int.tryParse(message.id) ?? 0);
+                              if (mounted) setState(() => _messages.removeWhere((m) => m.id == message.id));
+                            } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('删除失败: $e'))); }
+                          }
+                        },
+                        child: Align(
                         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -208,7 +218,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                             ],
                           ),
                         ),
-                      );
+                      ),
+                    );
                     },
                   ),
           ),

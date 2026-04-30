@@ -203,6 +203,12 @@ class ChatProvider extends ChangeNotifier {
     selectContact(contact);
   }
 
+  /// 删除消息（从本地列表移除）
+  void removeMessage(int messageId) {
+    _messages.removeWhere((m) => m.id == messageId);
+    notifyListeners();
+  }
+
   /// 删除联系人（从本地列表移除）
   void removeContact(int contactId) {
     _contacts.removeWhere((c) => c.id == contactId);

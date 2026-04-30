@@ -469,4 +469,26 @@ class ApiService {
       'file_size': fileData['file_size'],
     });
   }
+
+  // ========== 消息删除 ==========
+  
+  /// 删除单条私聊消息
+  Future<void> deleteMessage(int messageId) async {
+    await _dio.delete('/messages/$messageId');
+  }
+
+  /// 清空与联系人的聊天记录
+  Future<void> clearContactMessages(int contactId) async {
+    await _dio.delete('/messages/contact/$contactId');
+  }
+
+  /// 删除单条群聊消息
+  Future<void> deleteGroupMessage(int messageId) async {
+    await _dio.delete('/messages/group/item/$messageId');
+  }
+
+  /// 清空群聊消息
+  Future<void> clearGroupMessages(int groupId) async {
+    await _dio.delete('/messages/group/clear/$groupId');
+  }
 }

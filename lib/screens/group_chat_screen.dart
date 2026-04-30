@@ -286,6 +286,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         showModalBottomSheet(context: context, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(leading: const Icon(Icons.reply, color: Color(0xFF6C63FF)), title: const Text('回复'), onTap: () { setState(() => _replyTarget = message); Navigator.pop(context); }),
           ListTile(leading: const Icon(Icons.copy, color: Colors.grey), title: const Text('复制'), onTap: () { Navigator.pop(context); }),
+          if (isMe)
+            ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red), title: const Text('删除', style: TextStyle(color: Colors.red)), onTap: () async {
+              Navigator.pop(context);
+              final confirm = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('删除消息'), content: const Text('确定删除这条消息吗？'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')), TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除', style: TextStyle(color: Colors.red)))],));
+              if (confirm == true) {
+                try {
+                  await ApiService().deleteGroupMessage(message.id);
+                  if (mounted) setState(() => _messages.removeWhere((m) => m.id == message.id));
+                } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('删除失败: $e'))); }
+              }
+            }),
         ])));
       },
       child: Padding(
