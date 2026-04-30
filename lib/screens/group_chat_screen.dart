@@ -8,6 +8,7 @@ import '../models/group.dart';
 import '../helpers/file_icon_helper.dart';
 import 'invite_member_screen.dart';
 import 'group_members_screen.dart';
+import 'group_profile_screen.dart';
 
 class GroupMessage {
   final int id;
@@ -359,91 +360,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
   }
 
-  // ===== 群设置弹窗 =====
-
-  void _showInviteDialog() => Navigator.push(context, MaterialPageRoute(builder: (_) => InviteMemberScreen(groupId: widget.group.id)));
-  void _showMembersDialog() => Navigator.push(context, MaterialPageRoute(builder: (_) => GroupMembersScreen(group: widget.group)));
-
+  // ===== 群设置 → 群资料页 =====
   void _showGroupSettings() {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(leading: const Icon(Icons.people), title: const Text('群成员'),
-            onTap: () { Navigator.pop(ctx); _showMembersDialog(); }),
-          ListTile(leading: const Icon(Icons.person_add), title: const Text('邀请成员'),
-            onTap: () { Navigator.pop(ctx); _showInviteDialog(); }),
-          if (widget.group.isOwner) ...[
-            ListTile(leading: const Icon(Icons.edit), title: const Text('修改群名'),
-              onTap: () { Navigator.pop(ctx); _showRenameDialog(); }),
-            ListTile(leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('解散群组', style: TextStyle(color: Colors.red)),
-              onTap: () { Navigator.pop(ctx); _showDissolveDialog(); }),
-          ] else ...[
-            ListTile(leading: const Icon(Icons.exit_to_app, color: Colors.red),
-              title: const Text('退出群组', style: TextStyle(color: Colors.red)),
-              onTap: () { Navigator.pop(ctx); _showLeaveDialog(); }),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _showRenameDialog() {
-    final ctrl = TextEditingController(text: widget.group.name);
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('修改群名'), content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: '新群名')),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-        TextButton(onPressed: () async {
-          try {
-            await ApiService().updateGroupName(widget.group.id, ctrl.text);
-            Navigator.pop(ctx);
-            setState(() {});
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('群名已修改')));
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('修改失败: $e')));
-          }
-        }, child: const Text('确定')),
-      ],
-    ));
-  }
-
-  void _showDissolveDialog() {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('解散群组'), content: const Text('确定要解散这个群组吗？此操作不可恢复。'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-        TextButton(onPressed: () async {
-          try {
-            await ApiService().dissolveGroup(widget.group.id);
-            Navigator.pop(ctx); Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('群组已解散')));
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('解散失败: $e')));
-          }
-        }, style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('解散')),
-      ],
-    ));
-  }
-
-  void _showLeaveDialog() {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('退出群组'), content: const Text('确定要退出这个群组吗？'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-        TextButton(onPressed: () async {
-          try {
-            await ApiService().leaveGroup(widget.group.id);
-            Navigator.pop(ctx); Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已退出群组')));
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('退出失败: $e')));
-          }
-        }, style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('退出')),
-      ],
-    ));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => GroupProfileScreen(group: widget.group)));
   }
 
   Widget _buildReplyBar() {
