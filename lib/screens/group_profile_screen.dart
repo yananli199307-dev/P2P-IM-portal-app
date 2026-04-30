@@ -17,14 +17,14 @@ class GroupProfileScreen extends StatefulWidget {
 
 class _GroupProfileScreenState extends State<GroupProfileScreen> {
   late String _groupName;
-  String _announcement = ''; // TODO: 后端支持后启用
+  String _announcement = '';
   bool _muteNotifications = false;
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _groupName = widget.group.name;
+    _announcement = widget.group.announcement ?? '';
   }
 
   void _rename() async {
@@ -56,10 +56,13 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
       ],
     ));
     if (ok == true) {
-      setState(() => _announcement = ctrl.text);
-      // TODO: 等后端支持后调用 API 保存
+      try {
+        await ApiService().updateGroupAnnouncement(widget.group.id, ctrl.text);
+        setState(() => _announcement = ctrl.text);
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+      }
     }
-  }
 
   void _dissolve() async {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(

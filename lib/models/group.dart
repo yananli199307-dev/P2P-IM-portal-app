@@ -10,6 +10,7 @@ class Group {
   final String? groupUuid;  // 用于成员获取消息
   final String? ownerName;  // 群主名称
   final String? ownerPortal;  // 群主 Portal URL（用于成员列表判断）
+  final String? announcement;  // 群公告
 
   Group({
     required this.id,
@@ -23,12 +24,12 @@ class Group {
     this.groupUuid,
     this.ownerName,
     this.ownerPortal,
+    this.announcement,
   });
 
   factory Group.fromJson(Map<String, dynamic> json, {String? ownerPortal}) {
     final memberIds = List<int>.from(json['member_ids'] ?? []);
     final memberCount = json['member_count'] ?? memberIds.length;
-    // 检测群主：API 不返回 is_owner，从 UUID 判断（含自己域名即为群主）
     final isOwner = json['is_owner'] ?? (json['group_id']?.contains('agentp2p') ?? false);
     return Group(
       id: json['id'],
@@ -42,6 +43,7 @@ class Group {
       groupUuid: json['group_id'] ?? json['group_uuid'],
       ownerName: json['owner_name'],
       ownerPortal: json['owner_portal'] ?? ownerPortal,
+      announcement: json['announcement'],
     );
   }
 
