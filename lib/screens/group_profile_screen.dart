@@ -63,6 +63,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
+  }
 
   void _dissolve() async {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
