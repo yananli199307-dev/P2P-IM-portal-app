@@ -20,6 +20,7 @@ class _ChatInfoScreenState extends State<ChatInfoScreen> {
   void initState() {
     super.initState();
     _pinChat = widget.contact.isPinned;
+    _muteNotifications = false;
   }
 
   void _togglePin(bool v) async {
