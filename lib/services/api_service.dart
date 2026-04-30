@@ -269,11 +269,13 @@ class ApiService {
   // 获取群组列表
   Future<List<Map<String, dynamic>>> getGroups() async {
     final response = await _dio.get('/groups/my-groups');
-    // 后端返回 {"groups": [...]}
-    if (response.data is Map && response.data['groups'] != null) {
-      return List<Map<String, dynamic>>.from(response.data['groups']);
+    final groups = response.data is Map ? (response.data['groups'] ?? []) : response.data;
+    // /groups/my-groups 返回 db_id/group_name，映射为 id/name
+    for (var g in groups) {
+      g['id'] ??= g['db_id'];
+      g['name'] ??= g['group_name'];
     }
-    return List<Map<String, dynamic>>.from(response.data);
+    return List<Map<String, dynamic>>.from(groups);
   }
 
   // 创建群组
