@@ -491,4 +491,11 @@ class ApiService {
   Future<void> clearGroupMessages(int groupId) async {
     await _dio.delete('/messages/group/clear/$groupId');
   }
+
+  // ========== 搜索 ==========
+  
+  Future<List<Map<String, dynamic>>> searchMessages(String keyword, {int limit = 20}) async {
+    final response = await _dio.get('/messages/search', queryParameters: {'keyword': keyword, 'limit': limit});
+    return List<Map<String, dynamic>>.from(response.data);
+  }
 }

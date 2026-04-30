@@ -8,6 +8,7 @@ import '../models/contact.dart';
 import 'chat_detail_screen.dart';
 import 'group_chat_screen.dart';
 import 'agent_chat_screen.dart';
+import 'search_screen.dart';
 
 /// 消息列表混合项
 class _ChatItem {
@@ -115,6 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: const Text('消息'),
         actions: [
+          IconButton(icon: const Icon(Icons.search), onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())); }),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
