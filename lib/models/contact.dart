@@ -5,6 +5,7 @@ class Contact {
   final String? avatar;
   final String? note;
   final bool isFavorite;
+  final bool isPinned;
   final bool isActive;
   final DateTime createdAt;
 
@@ -15,6 +16,7 @@ class Contact {
     this.avatar,
     this.note,
     this.isFavorite = false,
+    this.isPinned = false,
     required this.isActive,
     required this.createdAt,
   });
@@ -27,6 +29,7 @@ class Contact {
       avatar: json['avatar'],
       note: json['note'],
       isFavorite: json['is_favorite'] ?? false,
+      isPinned: json['is_pinned'] ?? false,
       isActive: json['is_active'] ?? true,
       createdAt: DateTime.parse(json['created_at']),
     );

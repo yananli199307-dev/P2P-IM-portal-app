@@ -103,8 +103,14 @@ class _ChatScreenState extends State<ChatScreen> {
       ));
     }
 
-    // 时间倒序：最新消息在最上面
-    items.sort((a, b) => b.time.compareTo(a.time));
+    // 排序：置顶优先，然后按时间倒序
+    items.sort((a, b) {
+      final aPinned = a.contact?.isPinned == true;
+      final bPinned = b.contact?.isPinned == true;
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return b.time.compareTo(a.time);
+    });
     return items;
   }
 

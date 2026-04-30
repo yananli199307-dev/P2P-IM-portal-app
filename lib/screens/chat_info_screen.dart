@@ -13,8 +13,27 @@ class ChatInfoScreen extends StatefulWidget {
 }
 
 class _ChatInfoScreenState extends State<ChatInfoScreen> {
-  bool _muteNotifications = false;
-  bool _pinChat = false;
+  late bool _muteNotifications;
+  late bool _pinChat;
+
+  @override
+  void initState() {
+    super.initState();
+    _pinChat = widget.contact.isPinned;
+    _muteNotifications = false;
+    // 从 contact 列表读取最新状态
+    final contact = context.read<ChatProvider>().contacts.firstWhere((c) => c.id == widget.contact.id, orElse: () => widget.contact);
+    _pinChat = contact.isPinned;
+  }
+
+  void _togglePin(bool v) async {
+    try {
+      await ApiService().updateContact(widget.contact.id, isPinned: v);
+      setState(() => _pinChat = v);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+    }
+  }
 
   void _clearHistory() async {
     final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
@@ -65,7 +84,7 @@ class _ChatInfoScreenState extends State<ChatInfoScreen> {
             secondary: const Icon(Icons.push_pin, color: Colors.blueGrey),
             title: const Text('置顶聊天'),
             value: _pinChat,
-            onChanged: (v) => setState(() => _pinChat = v),
+            onChanged: _togglePin,
           ),
           const Divider(),
 

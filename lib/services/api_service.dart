@@ -257,10 +257,11 @@ class ApiService {
   }
 
   /// 更新联系人（备注名等）
-  Future<void> updateContact(int contactId, {String? note, bool? isFavorite}) async {
+  Future<void> updateContact(int contactId, {String? note, bool? isFavorite, bool? isPinned}) async {
     await _dio.put('/contacts/$contactId', data: {
       if (note != null) 'note': note,
       if (isFavorite != null) 'is_favorite': isFavorite,
+      if (isPinned != null) 'is_pinned': isPinned,
     });
   }
 
