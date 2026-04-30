@@ -30,9 +30,13 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
     _noteController.text = _note;
   }
 
-  void _toggleFavorite() {
-    setState(() => _isFavorite = !_isFavorite);
-    // TODO: 调 API 保存
+  void _toggleFavorite() async {
+    try {
+      await ApiService().updateContact(widget.contact.id, isFavorite: !_isFavorite);
+      setState(() => _isFavorite = !_isFavorite);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('操作失败: $e')));
+    }
   }
 
   void _saveNote() async {
