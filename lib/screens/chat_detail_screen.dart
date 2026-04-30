@@ -305,9 +305,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       );
     }
 
-    // 长按回复
-    return GestureDetector(
-      onLongPress: () {
+    // 长按/右键弹出菜单
+    final showMenu = () {
         showModalBottomSheet(context: context, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(leading: const Icon(Icons.reply, color: Color(0xFF6C63FF)), title: const Text('回复'), onTap: () { setState(() => _replyTarget = message); Navigator.pop(context); }),
           ListTile(leading: const Icon(Icons.copy, color: Colors.grey), title: const Text('复制'), onTap: () { /* TODO */ Navigator.pop(context); }),
@@ -323,7 +322,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               }
             }),
         ])));
-      },
+      };
+    
+    return GestureDetector(
+      onLongPress: showMenu,
+      onSecondaryTapUp: (_) => showMenu(),
       child: _buildAlignedBubble(message, isMe, time, content, replyPreview),
     );
   }
