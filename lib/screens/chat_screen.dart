@@ -7,6 +7,7 @@ import '../models/group.dart';
 import '../models/contact.dart';
 import 'chat_detail_screen.dart';
 import 'group_chat_screen.dart';
+import 'agent_chat_screen.dart';
 
 /// 消息列表混合项
 class _ChatItem {
@@ -60,11 +61,28 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// 合并联系人 + 群聊，按最后消息时间排序（微信风格）
+  /// 合并联系人 + 群聊 + My Agent，按最后消息时间排序（微信风格）
   List<_ChatItem> _buildChatList(ChatProvider provider) {
     final items = <_ChatItem>[];
     final lastMsg = provider.lastMessageTime;
     final lastPreview = provider.lastMessagePreview;
+
+    // My Agent 固定在列表顶部（如果有消息）
+    final agentKey = 'contact_0';
+    final agentTime = lastMsg[agentKey];
+    if (agentTime != null) {
+      items.add(_ChatItem(
+        group: Group(
+          id: 0,
+          name: 'My Agent',
+          ownerId: 0,
+          isOwner: true,
+          createdAt: agentTime,
+        ),
+        time: agentTime,
+        preview: lastPreview[agentKey] ?? '',
+      ));
+    }
 
     for (final contact in provider.contacts) {
       final key = 'contact_${contact.id}';
@@ -152,7 +170,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                   )
                                 : null,
                             onTap: () {
-                              if (item.isGroup) {
+                              // My Agent 特殊处理
+                              if (item.group?.id == 0 && item.group?.name == 'My Agent') {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (_) => const AgentChatScreen(),
+                                ));
+                              } else if (item.isGroup) {
                                 Navigator.push(context, MaterialPageRoute(
                                   builder: (_) => GroupChatScreen(group: item.group!),
                                 ));
