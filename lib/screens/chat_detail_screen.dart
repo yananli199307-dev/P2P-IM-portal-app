@@ -21,6 +21,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _scrollController = ScrollController();
   bool _shouldScrollToBottom = true;
   Message? _replyTarget;
+  bool _multiSelect = false;
+  final Set<int> _selectedIds = {};
+
+  void _enterMultiSelect(int messageId) {
+    setState(() { _multiSelect = true; _selectedIds.add(messageId); });
+  }
+
+  void _toggleSelect(int messageId) {
+    setState(() {
+      if (_selectedIds.contains(messageId)) { _selectedIds.remove(messageId); if (_selectedIds.isEmpty) _multiSelect = false; }
+      else { _selectedIds.add(messageId); }
+    });
+  }
+
+  void _exitMultiSelect() => setState(() { _multiSelect = false; _selectedIds.clear(); });
 
   @override
   void initState() {
@@ -139,6 +154,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
           // 回复引用栏
           if (_replyTarget != null) _buildReplyBar(),
+          // 多选操作栏
+          if (_multiSelect) _buildMultiSelectBar(),
           _buildInputBar(),
         ],
       ),
@@ -160,6 +177,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           Text(target.content, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
         ])),
         IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => setState(() => _replyTarget = null), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+      ]),
+    );
+  }
+
+  Widget _buildMultiSelectBar() {
+    final chatProvider = context.read<ChatProvider>();
+    return Container(color: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        TextButton(onPressed: _exitMultiSelect, child: const Text('取消')),
+        const Spacer(),
+        Text('已选 ${_selectedIds.length} 条', style: TextStyle(color: Colors.grey[600])),
+        const SizedBox(width: 12),
+        ElevatedButton.icon(
+          onPressed: _selectedIds.isEmpty ? null : () {
+            final msgs = chatProvider.messages.where((m) => _selectedIds.contains(m.id)).toList();
+            final combined = msgs.map((m) => m.content).join('\n---\n');
+            _exitMultiSelect();
+            Navigator.push(context, MaterialPageRoute(builder: (_) => ForwardScreen(content: combined)));
+          }, icon: const Icon(Icons.forward, size: 18), label: const Text('转发'),
+        ),
       ]),
     );
   }
@@ -321,7 +358,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ListTile(leading: const Icon(Icons.content_copy, color: Colors.blueGrey), title: const Text('复制'), onTap: () { Navigator.pop(context); }),
             ListTile(leading: const Icon(Icons.forward, color: Colors.blueGrey), title: const Text('转发'), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => ForwardScreen(content: message.content))); }),
             const Divider(),
-            ListTile(leading: const Icon(Icons.checklist, color: Colors.blueGrey), title: const Text('多选'), onTap: () { Navigator.pop(context); }),
+            ListTile(leading: const Icon(Icons.checklist, color: Colors.blueGrey), title: const Text('多选'), onTap: () { Navigator.pop(context); _enterMultiSelect(message.id); }),
             if (isMe)
               ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red), title: const Text('删除', style: TextStyle(color: Colors.red)), onTap: () async {
                 Navigator.pop(context);
@@ -338,8 +375,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
     
     return GestureDetector(
-      onLongPress: showMenu,
-      child: _buildAlignedBubble(message, isMe, time, content, replyPreview),
+      onTap: _multiSelect ? () => _toggleSelect(message.id) : null,
+      onLongPress: _multiSelect ? () => _toggleSelect(message.id) : showMenu,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (_multiSelect)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(_selectedIds.contains(message.id) ? Icons.check_circle : Icons.radio_button_unchecked, color: const Color(0xFF6C63FF)),
+            ),
+          Expanded(child: _buildAlignedBubble(message, isMe, time, content, replyPreview)),
+        ],
+      ),
     );
   }
 
