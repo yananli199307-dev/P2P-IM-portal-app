@@ -493,6 +493,11 @@ class ApiService {
     await _dio.delete('/messages/group/clear/$groupId');
   }
 
+  /// 撤回消息（硬删除）
+  Future<void> recallMessage(int messageId) async {
+    await _dio.post('/messages/$messageId/recall');
+  }
+
   Future<void> updateGroupAnnouncement(int groupId, String announcement) async {
     await _dio.put('/groups/$groupId/announcement', data: {'announcement': announcement});
   }

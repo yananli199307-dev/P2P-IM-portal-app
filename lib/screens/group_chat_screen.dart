@@ -293,6 +293,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             ListTile(leading: const Icon(Icons.forward, color: Colors.blueGrey), title: const Text('转发'), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => ForwardScreen(content: '${message.senderName}: ${message.content}'))); }),
             const Divider(),
             ListTile(leading: const Icon(Icons.checklist, color: Colors.blueGrey), title: const Text('多选'), onTap: () { Navigator.pop(context); }),
+            const Divider(),
+            if (isMe)
+              ListTile(leading: const Icon(Icons.undo, color: Colors.orange), title: const Text('撤回'), onTap: () async {
+                Navigator.pop(context);
+                try {
+                  await ApiService().recallMessage(message.id);
+                  if (mounted) setState(() => _messages.removeWhere((m) => m.id == message.id));
+                } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('撤回失败: $e'))); }
+              }),
             if (isMe)
               ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red), title: const Text('删除', style: TextStyle(color: Colors.red)), onTap: () async {
                 Navigator.pop(context);
