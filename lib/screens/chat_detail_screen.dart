@@ -192,7 +192,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ElevatedButton.icon(
           onPressed: _selectedIds.isEmpty ? null : () {
             final msgs = chatProvider.messages.where((m) => _selectedIds.contains(m.id)).toList();
-            final combined = msgs.map((m) => m.content).join('\n---\n');
+            final combined = msgs.map((m) => "${m.isFromMe ? '我' : '对方'}: ${m.content}").join('\n---\n');
             _exitMultiSelect();
             Navigator.push(context, MaterialPageRoute(builder: (_) => ForwardScreen(content: combined)));
           }, icon: const Icon(Icons.forward, size: 18), label: const Text('转发'),
