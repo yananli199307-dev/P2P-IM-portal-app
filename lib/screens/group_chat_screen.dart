@@ -9,6 +9,7 @@ import '../helpers/file_icon_helper.dart';
 import 'invite_member_screen.dart';
 import 'group_members_screen.dart';
 import 'group_profile_screen.dart';
+import 'forward_screen.dart';
 
 class GroupMessage {
   final int id;
@@ -289,7 +290,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             Container(height: 4, color: Colors.grey[300]),
             ListTile(leading: const Icon(Icons.reply, color: Color(0xFF6C63FF)), title: const Text('引用回复'), onTap: () { setState(() => _replyTarget = message); Navigator.pop(context); }),
             ListTile(leading: const Icon(Icons.content_copy, color: Colors.blueGrey), title: const Text('复制'), onTap: () { Navigator.pop(context); }),
-            ListTile(leading: const Icon(Icons.forward, color: Colors.blueGrey), title: const Text('转发'), onTap: () { Navigator.pop(context); }),
+            ListTile(leading: const Icon(Icons.forward, color: Colors.blueGrey), title: const Text('转发'), onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => ForwardScreen(content: '${message.senderName}: ${message.content}'))); }),
             const Divider(),
             ListTile(leading: const Icon(Icons.checklist, color: Colors.blueGrey), title: const Text('多选'), onTap: () { Navigator.pop(context); }),
             if (isMe)
