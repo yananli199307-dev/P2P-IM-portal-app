@@ -425,7 +425,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: Colors.grey[100], border: Border(top: BorderSide(color: Colors.grey[300]!))),
           child: Row(children: [
-            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => PlusMenuSheet.show(context, onFile: _sendFile, onImage: _sendFile)),
+            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => setState(() {})),
             Expanded(
               child: TextField(
                 controller: _messageController,
@@ -434,7 +434,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               ),
             ),
 
-            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => EmojiPicker.show(context, _messageController)),
+            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() {})),
             IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
           ]),
         ),

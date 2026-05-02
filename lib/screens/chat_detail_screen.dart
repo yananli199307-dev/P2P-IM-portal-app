@@ -26,6 +26,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Message? _replyTarget;
   bool _multiSelect = false;
   final Set<int> _selectedIds = {};
+  int _panelOpen = 0; // 0=none, 1=emoji, 2=plus
 
   void _enterMultiSelect(int messageId) {
     setState(() { _multiSelect = true; _selectedIds.add(messageId); });
@@ -159,6 +160,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           if (_replyTarget != null) _buildReplyBar(),
           // 多选操作栏
           if (_multiSelect) _buildMultiSelectBar(),
+          // 表情/加号面板
+          if (_panelOpen == 1) EmojiPicker(onEmoji: (e) { _messageController.text += e; _messageController.selection = TextSelection.fromPosition(TextPosition(offset: _messageController.text.length)); }),
+          if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile, onVoiceCall: (){}, onVideoCall: (){}, onLocation: (){}),
           _buildInputBar(),
         ],
       ),
@@ -214,7 +218,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => PlusMenuSheet.show(context, onFile: _sendFile, onImage: _sendFile, onVoiceCall: () => _callPlaceholder('语音通话'), onVideoCall: () => _callPlaceholder('视频通话'), onLocation: () => _locationPlaceholder())),
+            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => setState(() => _panelOpen = _panelOpen == 2 ? 0 : 2)),
             Expanded(
               child: TextField(
                 controller: _messageController,
@@ -225,7 +229,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
 
-            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => EmojiPicker.show(context, _messageController)),
+            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() => _panelOpen = _panelOpen == 1 ? 0 : 1)),
             IconButton(icon: const Icon(Icons.send, color: Color(0xFF6C63FF)), onPressed: _sendMessage),
           ],
         ),

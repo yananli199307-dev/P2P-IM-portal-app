@@ -246,7 +246,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => EmojiPicker.show(context, _messageController)),
+                IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() {})),
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _isSending ? null : _sendMessage,
