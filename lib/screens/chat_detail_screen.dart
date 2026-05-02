@@ -7,6 +7,7 @@ import '../models/message.dart';
 import 'package:intl/intl.dart';
 import '../helpers/file_icon_helper.dart';
 import '../widgets/link_text.dart';
+import '../widgets/plus_menu.dart';
 import 'chat_info_screen.dart';
 import 'forward_screen.dart';
 
@@ -212,6 +213,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       child: SafeArea(
         child: Row(
           children: [
+            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => PlusMenuSheet.show(context, onFile: _sendFile, onImage: _sendFile, onVoiceCall: () => _callPlaceholder('语音通话'), onVideoCall: () => _callPlaceholder('视频通话'), onLocation: () => _locationPlaceholder())),
             IconButton(icon: const Icon(Icons.attach_file), onPressed: _sendFile),
             Expanded(
               child: TextField(
@@ -227,6 +229,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       ),
     );
+  }
+
+  void _callPlaceholder(String type) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$type 功能开发中...')));
+  }
+
+  void _locationPlaceholder() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('位置分享功能开发中...')));
   }
 
   // ===== 消息列表（含日期分割线） =====
