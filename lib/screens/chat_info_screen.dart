@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/contact.dart';
 import '../services/api_service.dart';
 import '../providers/chat_provider.dart';
+import 'in_chat_search_screen.dart';
 
 class ChatInfoScreen extends StatefulWidget {
   final Contact contact;
@@ -105,8 +106,7 @@ class _ChatInfoScreenState extends State<ChatInfoScreen> {
             title: const Text('查找聊天记录'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: 会话内搜索
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('会话内搜索功能即将上线')));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => InChatSearchScreen(contactId: widget.contact.id)));
             },
           ),
           const Divider(),
