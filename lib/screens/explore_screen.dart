@@ -1,3 +1,5 @@
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
@@ -29,13 +31,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
+  void _openUrl() {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    // 如果没有 http 前缀，加上 https://
+    final fullUrl = url.startsWith('http') ? url : 'https://$url';
+    _launchUrl(fullUrl);
+  }
+
+  void _launchUrl(String url) {
+    html.window.open(url, '_blank');
+  }
+
   void _addFollow() async {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
+    final fullUrl = url.startsWith('http') ? url : 'https://$url';
     try {
-      await ApiService().addFollow(url);
+      await ApiService().addFollow(fullUrl);
       _urlController.clear();
       _loadFollows();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已添加关注')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('关注失败: $e')));
     }
@@ -59,17 +75,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
           // 搜索栏
           Padding(
             padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _urlController,
-              decoration: InputDecoration(
-                hintText: '输入 Portal URL 或关键词搜索',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(icon: const Icon(Icons.add_circle, color: Color(0xFF6C63FF)), onPressed: _addFollow),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                filled: true, fillColor: Colors.grey[100],
-              ),
-              onSubmitted: (_) => _addFollow(),
-            ),
+            child: Row(children: [
+              Expanded(child: TextField(
+                controller: _urlController,
+                decoration: InputDecoration(
+                  hintText: '输入 Portal URL 去浏览',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true, fillColor: Colors.grey[100],
+                ),
+                onSubmitted: (_) => _openUrl(),
+              )),
+              const SizedBox(width: 8),
+              IconButton(icon: const Icon(Icons.open_in_browser, color: Color(0xFF6C63FF)), onPressed: _openUrl, tooltip: '打开浏览'),
+              IconButton(icon: const Icon(Icons.bookmark_add, color: Colors.orange), onPressed: _addFollow, tooltip: '关注'),
+            ]),
           ),
           // 关注列表
           Expanded(
