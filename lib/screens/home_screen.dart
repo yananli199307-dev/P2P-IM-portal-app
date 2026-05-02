@@ -6,6 +6,7 @@ import '../providers/chat_provider.dart';
 import 'contacts_book_screen.dart';
 import 'chat_screen.dart';
 import 'settings_screen.dart';
+import 'explore_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final screens = [
       const ChatScreen(),
       const ContactsBookScreen(),
+      const ExploreScreen(),
       const SettingsScreen(),
     ];
 
@@ -83,6 +85,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.contacts_outlined),
             selectedIcon: Icon(Icons.contacts),
             label: '通讯录',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore),
+            label: '探索',
           ),
           const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
