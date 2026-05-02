@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
 import '../widgets/plus_menu.dart';
+import '../widgets/emoji_picker.dart';
 import '../widgets/link_text.dart';
 import '../services/websocket_service.dart';
 
@@ -245,6 +246,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
+                IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => EmojiPicker.show(context, _messageController)),
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _isSending ? null : _sendMessage,

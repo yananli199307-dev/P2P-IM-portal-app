@@ -8,6 +8,7 @@ import '../models/group.dart';
 import '../helpers/file_icon_helper.dart';
 import '../widgets/link_text.dart';
 import '../widgets/plus_menu.dart';
+import '../widgets/emoji_picker.dart';
 import '../widgets/link_text.dart';
 import 'invite_member_screen.dart';
 import 'group_members_screen.dart';
@@ -432,6 +433,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 onSubmitted: (_) => _sendMessage(),
               ),
             ),
+
+            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => EmojiPicker.show(context, _messageController)),
             IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
           ]),
         ),

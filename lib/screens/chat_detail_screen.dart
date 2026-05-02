@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../helpers/file_icon_helper.dart';
 import '../widgets/link_text.dart';
 import '../widgets/plus_menu.dart';
+import '../widgets/emoji_picker.dart';
 import 'chat_info_screen.dart';
 import 'forward_screen.dart';
 
@@ -223,6 +224,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 onSubmitted: (_) => _sendMessage(),
               ),
             ),
+
+            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => EmojiPicker.show(context, _messageController)),
             IconButton(icon: const Icon(Icons.send, color: Color(0xFF6C63FF)), onPressed: _sendMessage),
           ],
         ),
