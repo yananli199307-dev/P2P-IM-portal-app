@@ -502,6 +502,21 @@ class ApiService {
     await _dio.put('/groups/$groupId/announcement', data: {'announcement': announcement});
   }
 
+  // ========== 关注 ==========
+  
+  Future<List<Map<String, dynamic>>> getFollows() async {
+    final response = await _dio.get('/follows');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  Future<void> addFollow(String portalUrl) async {
+    await _dio.post('/follows', data: {'portal_url': portalUrl});
+  }
+
+  Future<void> removeFollow(int followId) async {
+    await _dio.delete('/follows/$followId');
+  }
+
   // ========== 搜索 ==========
   
   Future<List<Map<String, dynamic>>> searchMessages(String keyword, {int limit = 20}) async {
