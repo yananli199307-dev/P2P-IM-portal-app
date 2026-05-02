@@ -123,56 +123,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.user;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-        elevation: 0,
-      ),
-      body: ListView(
-        children: [
-          // 用户信息卡片（参照 Web 前端）
-          if (user != null)
-            Card(
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: const Color(0xFF6C63FF),
-                      child: Text(
-                        (user.displayName ?? user.portalUrl ?? '?')[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.displayName ?? '未设置',
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            user.portalUrl ?? '',
-                            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // 设置列表（参照 Web 前端）
+      appBar: AppBar(title: const Text('设置')),
+      body: ListView(children: [
+          // 账户
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text('账户', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
