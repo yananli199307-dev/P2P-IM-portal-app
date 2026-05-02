@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/group.dart';
 import '../helpers/file_icon_helper.dart';
+import '../widgets/link_text.dart';
 import 'invite_member_screen.dart';
 import 'group_members_screen.dart';
 import 'group_profile_screen.dart';
@@ -264,7 +265,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       content = Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(color: isMe ? Colors.blue[100] : Colors.grey[200], borderRadius: BorderRadius.circular(8)),
-        child: Text(message.content),
+        child: LinkText(message.content),
       );
     }
 

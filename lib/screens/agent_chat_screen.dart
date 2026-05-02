@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
+import '../widgets/link_text.dart';
 import '../services/websocket_service.dart';
 
 class AgentMessage {
@@ -206,7 +207,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(message.content),
+                              LinkText(message.content),
                               const SizedBox(height: 4),
                               Text(
                                 _formatTime(message.createdAt),

@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../models/message.dart';
 import 'package:intl/intl.dart';
 import '../helpers/file_icon_helper.dart';
+import '../widgets/link_text.dart';
 import 'chat_info_screen.dart';
 import 'forward_screen.dart';
 
@@ -331,7 +332,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       );
     } else {
-      content = Text(message.content, style: TextStyle(color: isMe ? Colors.white : Colors.black87));
+      content = LinkText(message.content, style: TextStyle(color: isMe ? Colors.white : Colors.black87));
     }
 
     // 回复预览
