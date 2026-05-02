@@ -96,7 +96,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _sendFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
+      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false, withData: true);
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
       
