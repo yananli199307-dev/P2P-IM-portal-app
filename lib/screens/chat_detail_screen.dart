@@ -11,6 +11,8 @@ import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import 'chat_info_screen.dart';
 import 'forward_screen.dart';
+import 'call_screen.dart';
+import '../services/webrtc_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -237,12 +239,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  void _callPlaceholder(String type) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$type 功能开发中...')));
-  }
-
   void _locationPlaceholder() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('位置分享功能开发中...')));
+  }
+
+  void _startCall(bool isVideo) {
+    setState(() => _panelOpen = 0);
+    final contact = context.read<ChatProvider>().selectedContact;
+    if (contact == null) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(
+      service: WebRTCService(),
+      peerName: contact.displayName,
+      isIncoming: false,
+      isVideo: isVideo,
+    )));
   }
 
   // ===== 消息列表（含日期分割线） =====
