@@ -214,7 +214,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Row(
           children: [
             IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => PlusMenuSheet.show(context, onFile: _sendFile, onImage: _sendFile, onVoiceCall: () => _callPlaceholder('语音通话'), onVideoCall: () => _callPlaceholder('视频通话'), onLocation: () => _locationPlaceholder())),
-            IconButton(icon: const Icon(Icons.attach_file), onPressed: _sendFile),
             Expanded(
               child: TextField(
                 controller: _messageController,

@@ -425,7 +425,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           decoration: BoxDecoration(color: Colors.grey[100], border: Border(top: BorderSide(color: Colors.grey[300]!))),
           child: Row(children: [
             IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => PlusMenuSheet.show(context, onFile: _sendFile, onImage: _sendFile)),
-            IconButton(icon: const Icon(Icons.attach_file), onPressed: _isSendingFile ? null : _sendFile),
             Expanded(
               child: TextField(
                 controller: _messageController,
