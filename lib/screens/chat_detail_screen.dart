@@ -11,8 +11,6 @@ import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import 'chat_info_screen.dart';
 import 'forward_screen.dart';
-import 'call_screen.dart';
-import '../services/webrtc_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -165,7 +163,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           _buildInputBar(),
           // 表情/加号面板（输入框下面）
           if (_panelOpen == 1) EmojiPicker(onEmoji: (e) { _messageController.text += e; _messageController.selection = TextSelection.fromPosition(TextPosition(offset: _messageController.text.length)); }),
-          if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile, onVoiceCall: () => _startCall(false), onVideoCall: () => _startCall(true), onLocation: (){}),
+          if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile, onVoiceCall: (){}, onVideoCall: (){}, onLocation: (){}),
         ],
       ),
     );
@@ -239,20 +237,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  void _locationPlaceholder() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('位置分享功能开发中...')));
+  void _callPlaceholder(String type) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$type 功能开发中...')));
   }
 
-  void _startCall(bool isVideo) {
-    setState(() => _panelOpen = 0);
-    final contact = context.read<ChatProvider>().selectedContact;
-    if (contact == null) return;
-    Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(
-      service: WebRTCService(),
-      peerName: contact.displayName,
-      isIncoming: false,
-      isVideo: isVideo,
-    )));
+  void _locationPlaceholder() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('位置分享功能开发中...')));
   }
 
   // ===== 消息列表（含日期分割线） =====
