@@ -163,7 +163,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           _buildInputBar(),
           // 表情/加号面板（输入框下面）
           if (_panelOpen == 1) EmojiPicker(onEmoji: (e) { _messageController.text += e; _messageController.selection = TextSelection.fromPosition(TextPosition(offset: _messageController.text.length)); }),
-          if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile, onVoiceCall: (){}, onVideoCall: (){}, onLocation: (){}),
+          if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile, onVoiceCall: () => _startCall(false), onVideoCall: () => _startCall(true), onLocation: (){}),
         ],
       ),
     );
