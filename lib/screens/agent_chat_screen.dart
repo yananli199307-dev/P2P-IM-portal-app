@@ -129,32 +129,28 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 
   Future<void> _sendFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-        allowMultiple: false,
-      );
-
+      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false, withData: true);
       if (result == null || result.files.isEmpty) return;
 
-      final filePath = result.files.first.path;
-      if (filePath == null) return;
+      final file = result.files.first;
+      setState(() => _isSending = true);
 
-      setState(() {
-        _isSending = true;
-      });
+      if (file.bytes != null) {
+        await ApiService().uploadFileBytes(file.name, file.bytes);
+      } else if (file.path != null) {
+        await ApiService().uploadFile(file.path!);
+      }
 
-      await ApiService().sendAgentFileMessage(filePath);
+      // 发送文件消息
+      final msg = file.path != null ? '📎 ${file.name}' : '📎 ${file.name}';
+      _messageController.clear();
+      _messageController.text = msg;
+      _sendMessage();
 
-      setState(() {
-        _isSending = false;
-      });
+      setState(() => _isSending = false);
     } catch (e) {
-      setState(() {
-        _isSending = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('发送文件失败: $e')),
-      );
+      setState(() => _isSending = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('发送文件失败: $e')));
     }
   }
 
