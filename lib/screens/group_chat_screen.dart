@@ -78,6 +78,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   bool _isSendingFile = false;
   bool _shouldScrollToBottom = true;
   GroupMessage? _replyTarget;
+  int _panelOpen = 0;
 
   @override
   void initState() {
@@ -425,7 +426,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: Colors.grey[100], border: Border(top: BorderSide(color: Colors.grey[300]!))),
           child: Row(children: [
-            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => setState(() {})),
+            IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: () => setState(() => _panelOpen = _panelOpen == 2 ? 0 : 2)),
             Expanded(
               child: TextField(
                 controller: _messageController,
@@ -434,10 +435,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               ),
             ),
 
-            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() {})),
+            IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() => _panelOpen = _panelOpen == 1 ? 0 : 1)),
             IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
           ]),
         ),
+        if (_panelOpen == 1) EmojiPicker(onEmoji: (e) { _messageController.text += e; _messageController.selection = TextSelection.fromPosition(TextPosition(offset: _messageController.text.length)); }),
+        if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile),
       ]),
     );
   }

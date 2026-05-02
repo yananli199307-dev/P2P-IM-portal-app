@@ -38,6 +38,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   final WebSocketService _wsService = WebSocketService();
   bool _isLoading = true;
   bool _isSending = false;
+  int _panelOpen = 0;
 
   @override
   void initState() {
@@ -232,10 +233,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.attach_file),
-                  onPressed: _isSending ? null : _sendFile,
-                ),
+                IconButton(icon: const Icon(Icons.add_circle_outline, color: Color(0xFF6C63FF)), onPressed: _isSending ? null : () => setState(() => _panelOpen = _panelOpen == 2 ? 0 : 2)),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -246,7 +244,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() {})),
+                IconButton(icon: const Icon(Icons.emoji_emotions, color: Color(0xFF6C63FF)), onPressed: () => setState(() => _panelOpen = _panelOpen == 1 ? 0 : 1)),
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _isSending ? null : _sendMessage,
@@ -254,6 +252,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
               ],
             ),
           ),
+          if (_panelOpen == 1) EmojiPicker(onEmoji: (e) { _messageController.text += e; _messageController.selection = TextSelection.fromPosition(TextPosition(offset: _messageController.text.length)); }),
+          if (_panelOpen == 2) PlusMenu(onFile: _sendFile, onImage: _sendFile),
         ],
       ),
     );
