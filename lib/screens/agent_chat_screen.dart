@@ -48,7 +48,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     try {
       final messages = await ApiService().getAgentMessages();
       setState(() {
-        _messages.addAll(messages.map((m) => AgentMessage(
+        _messages.addAll(messages.reversed.map((m) => AgentMessage(
           id: m['id'].toString(),
           content: m['content'],
           isFromUser: m['is_from_owner'] ?? true,
