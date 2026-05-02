@@ -5,7 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import 'contacts_book_screen.dart';
 import 'chat_screen.dart';
-import 'settings_screen.dart';
+import 'me_screen.dart';
 import 'explore_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const ChatScreen(),
       const ContactsBookScreen(),
       const ExploreScreen(),
-      const SettingsScreen(),
+      const MeScreen(),
     ];
 
     return Scaffold(
@@ -92,9 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: '探索',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '设置',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: '我',
           ),
         ],
       ),
