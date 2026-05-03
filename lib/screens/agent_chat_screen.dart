@@ -131,7 +131,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 
   Future<void> _sendFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false, withData: true);
+      final result = await FilePicker.pickFiles(type: FileType.any, allowMultiple: false, withData: true);
       if (result == null || result.files.isEmpty) return;
 
       final file = result.files.first;
