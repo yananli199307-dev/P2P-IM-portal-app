@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 
 class LinkText extends StatelessWidget {
   final String text;
@@ -21,7 +21,7 @@ class LinkText extends StatelessWidget {
       }
       spans.add(WidgetSpan(
         child: GestureDetector(
-          onTap: () => html.window.open(url.url, '_blank'),
+          onTap: () => launchUrl(Uri.parse(url.url)),
           child: Text(url.url, style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline, fontSize: style?.fontSize, fontWeight: style?.fontWeight)),
         ),
       ));

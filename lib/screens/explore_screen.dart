@@ -1,4 +1,4 @@
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
@@ -34,7 +34,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void _openUrl() {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
-    html.window.open(url.startsWith('http') ? url : 'https://$url', '_blank');
+    launchUrl(Uri.parse(url.startsWith('http') ? url : 'https://$url'));
   }
 
   void _addFollow() async {
@@ -103,7 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 final f = _follows[i];
                 final name = f['display_name'] ?? f['portal_url'] ?? '?';
                 return GestureDetector(
-                  onTap: () => html.window.open(f['portal_url'] ?? '', '_blank'),
+                  onTap: () => launchUrl(Uri.parse(f['portal_url'] ?? '')),
                   onLongPress: () => _removeFollow(f['id']),
                   child: Container(width: 64, margin: const EdgeInsets.symmetric(horizontal: 4),
                     child: Column(children: [
@@ -121,7 +121,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               title: Text(f['display_name'] ?? f['portal_url'] ?? ''),
               subtitle: Text(f['portal_url'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               trailing: IconButton(icon: const Icon(Icons.close, size: 18, color: Colors.grey), onPressed: () => _removeFollow(f['id'])),
-              onTap: () => html.window.open(f['portal_url'] ?? '', '_blank'),
+              onTap: () => launchUrl(Uri.parse(f['portal_url'] ?? '')),
             )),
           const SizedBox(height: 8),
         ],
