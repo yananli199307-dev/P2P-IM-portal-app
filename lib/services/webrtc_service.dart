@@ -17,8 +17,9 @@ class WebRTCService {
   html.MediaStream? get localStream => _localStream;
 
   Future<void> init() async {
-    final config = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]};
-    _pc = html.RtcPeerConnection(config);
+    _pc = html.RtcPeerConnection({
+      'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]
+    });
     _pc!.onIceCandidate.listen((e) {
       if (e.candidate != null) {
         onSignal?.call('call_ice', {
@@ -50,7 +51,10 @@ class WebRTCService {
     _localStream = await html.window.navigator.mediaDevices!
         .getUserMedia({'audio': true, 'video': isVideo});
     _localStream!.getTracks().forEach((t) => _pc!.addTrack(t, _localStream!));
-    await _pc!.setRemoteDescription({'sdp': offerSdp, 'type': 'offer'});
+    // dart:html setRemoteDescription accepts Map or RtcSessionDescription
+    await (_pc! as dynamic).setRemoteDescription({
+      'sdp': offerSdp, 'type': 'offer'
+    });
     final answer = await _pc!.createAnswer();
     await _pc!.setLocalDescription(answer);
     onSignal?.call('call_accept', {'sdp': answer.sdp});
@@ -58,12 +62,14 @@ class WebRTCService {
   }
 
   Future<void> onCallAccepted(String sdp) async {
-    await _pc!.setRemoteDescription({'sdp': sdp, 'type': 'answer'});
+    await (_pc! as dynamic).setRemoteDescription({
+      'sdp': sdp, 'type': 'answer'
+    });
     _startDuration();
   }
 
   void onIceCandidate(Map<String, dynamic> data) {
-    _pc?.addCandidate({
+    (_pc! as dynamic).addIceCandidate({
       'candidate': data['candidate'],
       'sdpMid': data['sdpMid'],
       'sdpMLineIndex': data['sdpMLineIndex'],

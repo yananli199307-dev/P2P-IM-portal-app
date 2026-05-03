@@ -11,6 +11,7 @@ import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import 'chat_info_screen.dart';
 import 'forward_screen.dart';
+import 'call_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({super.key});
@@ -121,6 +122,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final chatProvider = context.watch<ChatProvider>();
     final contact = chatProvider.selectedContact;
     final messages = chatProvider.messages;
+    
+    // 接收入通话
+    final incomingCall = chatProvider.incomingCall;
+    if (incomingCall != null && contact != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          final call = chatProvider.incomingCall;
+          if (call != null) {
+            final callCopy = Map<String, dynamic>.from(call);
+            setState(() {});
+            Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(
+              peerName: contact.displayName,
+              isIncoming: true,
+              isVideo: callCopy['type'] == 'video',
+              offerSdp: callCopy['sdp'],
+            )));
+          }
+        }
+      });
+    }
 
     // 滚动到底部（初次加载）
     if (messages.isNotEmpty) {
