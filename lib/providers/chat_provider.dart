@@ -13,6 +13,8 @@ class ChatProvider extends ChangeNotifier {
   Contact? _selectedContact;
   bool _isLoading = false;
   String? _error;
+  Map<String, dynamic>? incomingCall;
+  Map<String, dynamic>? _callSignal;
   bool _isConnected = false;
   String? _baseUrl;
   String? _userId;
@@ -106,6 +108,16 @@ class ChatProvider extends ChangeNotifier {
     }
     
     switch (type) {
+
+      case "call_invite":
+        incomingCall = data;
+        break;
+      case "call_accept":
+      case "call_reject":
+      case "call_hangup":
+      case "call_ice":
+        _callSignal = {"type": type, "data": data};
+        break;
       case 'new_message':
         _handleNewMessage(data);
         break;
