@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/local_db.dart';
 import '../models/message.dart';
+import '../providers/chat_provider.dart';
 import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import '../widgets/link_text.dart';
