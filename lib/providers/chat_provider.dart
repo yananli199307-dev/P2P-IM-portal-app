@@ -3,10 +3,12 @@ import '../models/contact.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
+import '../services/local_db.dart';
 
 class ChatProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   final WebSocketService _wsService = WebSocketService();
+  final LocalDb _localDb = LocalDb();
 
   List<Contact> _contacts = [];
   List<Message> _messages = [];
@@ -139,6 +141,9 @@ class ChatProvider extends ChangeNotifier {
     try {
       final newMessage = Message.fromJson(data);
       
+      // 写入本地缓存
+      _localDb.upsertMessage(newMessage);
+      
       // 更新最后消息时间
       if (newMessage.contactId != null) {
         _lastMessageTime['contact_${newMessage.contactId}'] = newMessage.createdAt;
@@ -196,14 +201,28 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 选择联系人
+  /// 选择联系人 — 本地缓存秒开，后台静默同步
   void selectContact(Contact contact) {
     _selectedContact = contact;
     _messages = [];
     notifyListeners();
-    loadMessages(contact.id);
-    // 标记该联系人的消息为已读
+    _loadLocalThenSync(contact.id);
     markContactMessagesAsRead(contact.id);
+  }
+
+  Future<void> _loadLocalThenSync(int contactId) async {
+    // 1. 先读本地缓存，秒开
+    try {
+      final cached = await _localDb.getContactMessages(contactId);
+      if (cached.isNotEmpty && _selectedContact?.id == contactId) {
+        _messages = cached;
+        _isLoading = false;
+        notifyListeners();
+      }
+    } catch (_) {}
+
+    // 2. 后台从服务器同步最新消息
+    await loadMessages(contactId);
   }
 
   /// 通过 ID 选择联系人
@@ -265,6 +284,8 @@ class ChatProvider extends ChangeNotifier {
       messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       _messages = messages;
       _error = null;
+      // 存入本地缓存
+      _localDb.upsertMessages(messages);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -290,7 +311,7 @@ class ChatProvider extends ChangeNotifier {
         replyToSenderName: replyToSenderName,
       );
       
-      // 添加到本地消息列表（WebSocket 也会推送，但先添加可以立即显示）
+      // 添加到本地消息列表
       _messages.add(message);
       
       // 同时通过 WebSocket 发送（用于实时通知）
