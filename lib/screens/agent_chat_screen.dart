@@ -93,7 +93,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
           fileUrl: m.fileUrl,
           fileName: m.fileName,
         )));
-        if (cached.length < 50) _isLoading = true;  // 本地消息少时显示加载中
+        _isLoading = false;
       });
       _scrollToBottom();
     } else {

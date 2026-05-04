@@ -24,6 +24,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _shouldScrollToBottom = true;
+  bool _scrolledOnce = false;  // 避免二次跳
   Message? _replyTarget;
   bool _multiSelect = false;
   final Set<int> _selectedIds = {};
@@ -128,8 +129,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final contact = chatProvider.selectedContact;
     final messages = chatProvider.messages;
 
-    // 滚动到底部（初次加载）
-    if (messages.isNotEmpty) {
+    // 初次加载后跳到底部（只跳一次）
+    if (messages.isNotEmpty && !_scrolledOnce) {
+      _scrolledOnce = true;
       _scrollToBottom();
     }
 

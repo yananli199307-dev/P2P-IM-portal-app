@@ -139,6 +139,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();  // LocalDb已ASC，不反转
         _isLoading = false;
       });
+      _scrollToBottom();
     }
     
     // 2. 后台从服务器同步
