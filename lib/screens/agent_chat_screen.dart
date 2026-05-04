@@ -64,6 +64,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         )));
         _isLoading = false;
       });
+      _scrollToBottom();
     }
     
     // 2. 后台同步服务器
@@ -122,13 +123,9 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
   }
