@@ -13,7 +13,8 @@ class ChatProvider extends ChangeNotifier {
   List<Contact> _contacts = [];
   List<Message> _messages = [];
   Contact? _selectedContact;
-  VoidCallback? onScrollToBottom;  // Screen 设置，消息加载完成后调用
+  VoidCallback? onScrollToBottom;
+  void Function(String content)? onAgentReply;  // Screen 设置，消息加载完成后调用
   final Map<int, List<Message>> _msgCache = {};  // contactId → 最近消息窗口
   bool _isLoading = false;
   String? _error;
@@ -124,6 +125,20 @@ class ChatProvider extends ChangeNotifier {
         break;
       case 'new_message':
         _handleNewMessage(data);
+        break;
+      case 'agent_reply':
+        final content = data?['content'] ?? message['content'] ?? '';
+        if (content.isNotEmpty) {
+          _localDb.upsertMessage(Message(
+            id: DateTime.now().millisecondsSinceEpoch,
+            contactId: 0,
+            content: content,
+            type: MessageType.text,
+            isFromMe: false,
+            createdAt: DateTime.now(),
+          ));
+          onAgentReply?.call(content);
+        }
         break;
       case 'ack':
         // 确认收到，无需处理

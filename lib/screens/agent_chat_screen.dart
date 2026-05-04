@@ -6,7 +6,6 @@ import '../models/message.dart';
 import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import '../widgets/link_text.dart';
-import '../services/websocket_service.dart';
 
 class AgentMessage {
   final String id;
@@ -37,7 +36,6 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<AgentMessage> _messages = [];
-  final WebSocketService _wsService = WebSocketService();
   bool _isLoading = false;  // 默认不显示圈，缓存命中直接显示消息
   bool _isSending = false;
   int _panelOpen = 0;
@@ -46,8 +44,23 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    
+    // 接收 Agent 实时回复
+    context.read<ChatProvider>().onAgentReply = (content) {
+      if (mounted) {
+        setState(() {
+          _messages.add(AgentMessage(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            content: content,
+            isFromUser: false,
+            createdAt: DateTime.now(),
+          ));
+        });
+        _scrollToBottom();
+      }
+    };
+    
     _loadHistory();
-    _initWebSocket();
   }
 
   void _onScroll() {
@@ -137,30 +150,6 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _initWebSocket() {
-    _wsService.onMessage = (message) {
-      if (message['type'] == 'agent_reply') {
-        final msg = AgentMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: message['content'],
-          isFromUser: false,
-          createdAt: DateTime.now(),
-        );
-        setState(() => _messages.add(msg));
-        // 写入本地缓存
-        LocalDb().upsertMessage(Message(
-          id: int.tryParse(msg.id) ?? DateTime.now().millisecondsSinceEpoch,
-          contactId: 0,
-          content: msg.content,
-          type: MessageType.text,
-          isFromMe: false,
-          createdAt: msg.createdAt,
-        ));
-        _scrollToBottom();
-      }
-    };
   }
 
   void _scrollToBottom() {
