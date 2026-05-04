@@ -36,7 +36,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients && _shouldScrollToBottom) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            _scrollController.jumpTo(double.infinity);
           }
         });
       });
@@ -92,13 +92,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _scrollToBottom() {
-    // 双重 postFrameCallback：等 ListView 完成两次布局（消息渲染→高度变化）后再跳
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients && _shouldScrollToBottom) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-        }
-      });
+      if (_scrollController.hasClients && _shouldScrollToBottom) {
+        _scrollController.jumpTo(double.infinity);
+      }
     });
   }
 

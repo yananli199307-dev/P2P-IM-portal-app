@@ -171,7 +171,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          _scrollController.jumpTo(double.infinity);
         }
       });
     });
