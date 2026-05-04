@@ -163,7 +163,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         _messages.addAll(newGroupMsgs);
         _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         LocalDb().upsertGroupMessages(newMsgs);
-      } else if (cached.isEmpty) {
+      } else if (_messages.isEmpty) {
         _messages = messagesData.reversed.map((m) => GroupMessage.fromJson(m)).toList();
         LocalDb().upsertGroupMessages(messagesData);
       }
