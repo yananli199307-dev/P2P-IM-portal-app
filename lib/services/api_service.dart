@@ -13,8 +13,8 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Portal 地址：Web 走本地代理（8080），手机直连
-  static String baseUrl = kIsWeb ? 'http://localhost:8080/api' : '/api';
+  // Portal 地址：Web 走本地代理（8080），手机使用安全默认值（登录后更新为实际 Portal URL）
+  static String baseUrl = kIsWeb ? 'http://localhost:8080/api' : 'https://placeholder.local/api';
   
   late Dio _dio;
   String? _token;
@@ -105,6 +105,8 @@ class ApiService {
   Future<String> login(String portalUrl, String password) async {
     // 先设置 Portal URL
     await setPortalUrl(portalUrl);
+    // 更新 Dio baseUrl 为目标 Portal（非 Web 平台必需绝对 URL）
+    updateBaseUrl('$portalUrl/api');
     
     final response = await _dio.post('/auth/login', data: {
       'portal_url': portalUrl,
