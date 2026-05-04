@@ -38,7 +38,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<AgentMessage> _messages = [];
   final WebSocketService _wsService = WebSocketService();
-  bool _isLoading = true;  // 默认显示加载中，和群聊一致
+  bool _isLoading = false;  // 默认不显示圈，缓存命中直接显示消息
   bool _isSending = false;
   int _panelOpen = 0;
 

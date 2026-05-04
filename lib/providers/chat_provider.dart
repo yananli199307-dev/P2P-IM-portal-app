@@ -215,6 +215,7 @@ class ChatProvider extends ChangeNotifier {
     if (_msgCache.containsKey(contact.id)) {
       _messages = _msgCache[contact.id]!;
       notifyListeners();
+      onScrollToBottom?.call();  // 内存缓存命中也要滚底
     } else {
       _messages = [];
       notifyListeners();
