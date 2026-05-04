@@ -38,7 +38,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<AgentMessage> _messages = [];
   final WebSocketService _wsService = WebSocketService();
-  bool _isLoading = true;
+  bool _isLoading = false;  // 默认 false，首次无缓存时才显示
   bool _isSending = false;
   int _panelOpen = 0;
 
@@ -63,9 +63,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
           fileUrl: m.fileUrl,
           fileName: m.fileName,
         )));
-        _isLoading = false;
+        if (cached.length < 50) _isLoading = true;  // 本地消息少时显示加载中
       });
       _scrollToBottom();
+    } else {
+      setState(() => _isLoading = true);  // 无本地缓存，显示加载圈
     }
     
     // 2. 后台同步服务器
