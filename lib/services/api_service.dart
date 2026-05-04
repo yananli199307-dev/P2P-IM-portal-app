@@ -49,6 +49,8 @@ class ApiService {
     _portalUrl = url;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('portal_url', url);
+    // 同步更新 Dio 的 baseUrl
+    updateBaseUrl('$url/api');
   }
 
   /// 更新 API 基地址（用于手机切换 Portal）
