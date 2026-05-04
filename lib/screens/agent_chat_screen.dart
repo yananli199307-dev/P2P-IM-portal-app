@@ -179,16 +179,28 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 
     _messageController.clear();
 
+    final msgId = DateTime.now().millisecondsSinceEpoch;
+    final msgTime = DateTime.now();
     setState(() {
       _messages.add(AgentMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: msgId.toString(),
         content: content,
         isFromUser: true,
-        createdAt: DateTime.now(),
+        createdAt: msgTime,
       ));
       _isSending = true;
     });
     _scrollToBottom();
+    
+    // 写入本地缓存，下次打开秒出
+    LocalDb().upsertMessage(Message(
+      id: msgId,
+      contactId: 0,
+      content: content,
+      type: MessageType.text,
+      isFromMe: true,
+      createdAt: msgTime,
+    ));
 
     try {
       await ApiService().sendAgentMessage(content);

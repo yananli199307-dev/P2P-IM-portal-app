@@ -46,14 +46,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    context.read<ChatProvider>().onScrollToBottom = () {
+    
+    final provider = context.read<ChatProvider>();
+    provider.onScrollToBottom = () {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // 双重回调等 ListView 完全渲染：第一帧 setState→build，第二帧布局完成
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-        });
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
       });
     };
+    
+    // selectContact 可能在页面创建前已执行完毕，消息已就绪
+    if (provider.messages.isNotEmpty) {
+      _shouldScrollToBottom = true;
+      _scrollToBottom();
+    }
   }
 
   void _onScroll() {
