@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
 import '../services/local_db.dart';
+import '../models/message.dart';
 import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import '../widgets/link_text.dart';
@@ -109,14 +110,22 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   void _initWebSocket() {
     _wsService.onMessage = (message) {
       if (message['type'] == 'agent_reply') {
-        setState(() {
-          _messages.add(AgentMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            content: message['content'],
-            isFromUser: false,
-            createdAt: DateTime.now(),
-          ));
-        });
+        final msg = AgentMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          content: message['content'],
+          isFromUser: false,
+          createdAt: DateTime.now(),
+        );
+        setState(() => _messages.add(msg));
+        // 写入本地缓存
+        LocalDb().upsertMessage(Message(
+          id: int.tryParse(msg.id) ?? DateTime.now().millisecondsSinceEpoch,
+          contactId: 0,
+          content: msg.content,
+          type: MessageType.text,
+          isFromMe: false,
+          createdAt: msg.createdAt,
+        ));
         _scrollToBottom();
       }
     };
