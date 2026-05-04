@@ -47,15 +47,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     
-    final provider = context.read<ChatProvider>();
-    provider.onScrollToBottom = () {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-      });
-    };
-    
-    // 页面已创建，加载消息
-    provider.loadCurrentMessages();
+    // 消息已预加载在内存，直接滚底
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
+    });
   }
 
   void _onScroll() {

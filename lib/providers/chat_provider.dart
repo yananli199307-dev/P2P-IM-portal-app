@@ -195,7 +195,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       _contacts = await _apiService.getContacts();
       _error = null;
-      // 加载未读消息
+      // 预加载所有聊天的最近消息到内存
+      _preloadAllMessages();
       await loadUnreadMessages();
     } catch (e) {
       _error = e.toString();
@@ -218,7 +219,7 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 选择联系人 — 只记录选中，消息由 Screen 加载
+  /// 选择联系人 — 内存已预加载，直接取
   void selectContact(Contact contact) {
     final prevId = _selectedContact?.id;
     if (prevId != null) {
@@ -232,6 +233,9 @@ class ChatProvider extends ChangeNotifier {
       _messages = [];
     }
     notifyListeners();
+    
+    markContactMessagesAsRead(contact.id);
+    _syncFromServer(contact.id);
   }
 
   /// 加载当前联系人的消息（由 Screen 在 initState 调用，确保页面已创建）
@@ -240,6 +244,20 @@ class ChatProvider extends ChangeNotifier {
     if (contactId == null) return;
     markContactMessagesAsRead(contactId);
     await _loadLocalThenSync(contactId);
+  }
+
+  /// 预加载所有联系人 + My Agent 的最近消息到内存缓存
+  void _preloadAllMessages() {
+    // My Agent (contact_id=0)
+    _localDb.getContactMessages(0).then((msgs) {
+      if (msgs.isNotEmpty) _msgCache[0] = msgs;
+    });
+    // 所有联系人
+    for (final c in _contacts) {
+      _localDb.getContactMessages(c.id).then((msgs) {
+        if (msgs.isNotEmpty) _msgCache[c.id] = msgs;
+      });
+    }
   }
 
   Future<void> _loadLocalThenSync(int contactId) async {
