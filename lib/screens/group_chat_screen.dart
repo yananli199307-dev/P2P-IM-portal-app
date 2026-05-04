@@ -89,11 +89,29 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.position.pixels;
-      _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
+    
+    // 滑到顶部加载更早消息
+    if (currentScroll < 50 && !_loadingMore && _messages.isNotEmpty) {
+      _loadMore();
     }
+  }
+
+  bool _loadingMore = false;
+  Future<void> _loadMore() async {
+    _loadingMore = true;
+    final oldest = _messages.first.createdAt;
+    final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
+    final older = cached.where((m) => DateTime.parse(m['created_at'] ?? '').isBefore(oldest)).toList();
+    if (older.isNotEmpty && mounted) {
+      setState(() {
+        _messages.insertAll(0, older.map((m) => GroupMessage.fromJson(m)));
+      });
+    }
+    _loadingMore = false;
   }
 
   @override

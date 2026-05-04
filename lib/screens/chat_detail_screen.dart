@@ -49,11 +49,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _onScroll() {
-    // 用户手动滚动后停止自动滚底
-    if (_scrollController.hasClients) {
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.position.pixels;
-      _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
+    
+    // 滑到顶部时加载更早消息
+    if (currentScroll < 50) {
+      final contact = context.read<ChatProvider>().selectedContact;
+      if (contact != null) {
+        context.read<ChatProvider>().loadMoreMessages(contact.id);
+      }
     }
   }
 

@@ -45,8 +45,38 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadHistory();
     _initWebSocket();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll < 50 && !_loadingMore && _messages.isNotEmpty) {
+      _loadMore();
+    }
+  }
+
+  bool _loadingMore = false;
+  Future<void> _loadMore() async {
+    _loadingMore = true;
+    final oldest = _messages.first.createdAt;
+    final cached = await LocalDb().getContactMessages(0);
+    final older = cached.where((m) => m.createdAt.isBefore(oldest)).toList();
+    if (older.isNotEmpty && mounted) {
+      setState(() {
+        _messages.insertAll(0, older.map((m) => AgentMessage(
+          id: m.id.toString(),
+          content: m.content,
+          isFromUser: m.isFromMe,
+          createdAt: m.createdAt,
+          fileUrl: m.fileUrl,
+          fileName: m.fileName,
+        )));
+      });
+    }
+    _loadingMore = false;
   }
 
   Future<void> _loadHistory() async {

@@ -269,6 +269,27 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  bool _loadingMore = false;
+  bool get loadingMore => _loadingMore;
+
+  /// 上滑加载更早历史消息
+  Future<void> loadMoreMessages(int contactId) async {
+    if (_loadingMore || _messages.isEmpty) return;
+    _loadingMore = true;
+    final oldest = _messages.first.createdAt;
+    
+    try {
+      final older = await _localDb.getContactMessages(contactId, limit: 200);
+      final newOnes = older.where((m) => m.createdAt.isBefore(oldest)).toList();
+      if (newOnes.isNotEmpty && _selectedContact?.id == contactId) {
+        _messages.insertAll(0, newOnes);
+        _msgCache[contactId] = List.from(_messages);
+        notifyListeners();
+      }
+    } catch (_) {}
+    _loadingMore = false;
+  }
+
   /// 通过 ID 选择联系人
   void selectContactById(int contactId) {
     final contact = _contacts.firstWhere(
