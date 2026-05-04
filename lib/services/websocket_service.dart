@@ -29,7 +29,7 @@ class WebSocketService {
   // 重连配置
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
-  static const int maxReconnectAttempts = 5;
+  static const int maxReconnectAttempts = 100;
   static const Duration reconnectDelay = Duration(seconds: 3);
 
   /// 初始化并连接
@@ -65,7 +65,7 @@ class WebSocketService {
       wsUrl = wsUrl.replaceAll('/api', '');
       
       // 添加 WebSocket 路径
-      final path = _isAgent ? '/ws/agent' : '/ws/agent';
+      final path = _isAgent ? '/ws/agent' : '/ws';
       wsUrl = '$wsUrl$path?token=$_token';
       
       if (kDebugMode) {
