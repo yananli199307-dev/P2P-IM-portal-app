@@ -116,7 +116,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
     if (cached.isNotEmpty && mounted) {
       setState(() {
-        _messages = cached.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+        _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();  // LocalDb已ASC，不反转
         _isLoading = false;
       });
     }
