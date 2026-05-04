@@ -203,29 +203,28 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 选择联系人 — SQLite 秒读，增量同步
+  /// 选择联系人 — 只记录选中，消息由 Screen 加载
   void selectContact(Contact contact) {
     final prevId = _selectedContact?.id;
     if (prevId != null) {
-      _msgCache[prevId] = List.from(_messages);  // 缓存当前列表
+      _msgCache[prevId] = List.from(_messages);
     }
     _selectedContact = contact;
     
-    // 从缓存或本地 DB 秒取
     if (_msgCache.containsKey(contact.id)) {
       _messages = _msgCache[contact.id]!;
-      notifyListeners();
-      onScrollToBottom?.call();  // 内存缓存命中也要滚底
     } else {
       _messages = [];
-      notifyListeners();
-      _loadLocalThenSync(contact.id);
-      return;
     }
-    
-    // 后台增量同步
-    markContactMessagesAsRead(contact.id);
-    _syncFromServer(contact.id);
+    notifyListeners();
+  }
+
+  /// 加载当前联系人的消息（由 Screen 在 initState 调用，确保页面已创建）
+  Future<void> loadCurrentMessages() async {
+    final contactId = _selectedContact?.id;
+    if (contactId == null) return;
+    markContactMessagesAsRead(contactId);
+    await _loadLocalThenSync(contactId);
   }
 
   Future<void> _loadLocalThenSync(int contactId) async {

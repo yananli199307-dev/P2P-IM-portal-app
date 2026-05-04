@@ -54,11 +54,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       });
     };
     
-    // selectContact 可能在页面创建前已执行完毕，消息已就绪
-    if (provider.messages.isNotEmpty) {
-      _shouldScrollToBottom = true;
-      _scrollToBottom();
-    }
+    // 页面已创建，加载消息
+    provider.loadCurrentMessages();
   }
 
   void _onScroll() {
