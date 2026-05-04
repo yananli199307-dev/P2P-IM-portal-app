@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
+import '../services/local_db.dart';
 import '../widgets/plus_menu.dart';
 import '../widgets/emoji_picker.dart';
 import '../widgets/link_text.dart';
@@ -48,24 +49,59 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Future<void> _loadHistory() async {
-    try {
-      final messages = await ApiService().getAgentMessages();
+    // 1. 先读本地缓存
+    final cached = await LocalDb().getContactMessages(0);
+    if (cached.isNotEmpty && mounted) {
       setState(() {
-        _messages.addAll(messages.reversed.map((m) => AgentMessage(
-          id: m['id'].toString(),
-          content: m['content'],
-          isFromUser: m['is_from_owner'] ?? true,
-          createdAt: DateTime.parse(m['created_at']),
-          fileUrl: m['file_url'],
-          fileName: m['file_name'],
+        _messages.clear();
+        _messages.addAll(cached.map((m) => AgentMessage(
+          id: m.id.toString(),
+          content: m.content,
+          isFromUser: m.isFromMe,
+          createdAt: m.createdAt,
+          fileUrl: m.fileUrl,
+          fileName: m.fileName,
         )));
         _isLoading = false;
       });
+    }
+    
+    // 2. 后台同步服务器
+    try {
+      final messages = await ApiService().getAgentMessages();
+      if (!mounted) return;
+      
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final newMsgs = messages.where((m) => !existingIds.contains(m['id'].toString())).toList();
+      
+      if (newMsgs.isNotEmpty) {
+        setState(() {
+          _messages.addAll(newMsgs.reversed.map((m) => AgentMessage(
+            id: m['id'].toString(),
+            content: m['content'],
+            isFromUser: m['is_from_owner'] ?? true,
+            createdAt: DateTime.parse(m['created_at']),
+            fileUrl: m['file_url'],
+            fileName: m['file_name'],
+          )));
+        });
+      } else if (cached.isEmpty) {
+        setState(() {
+          _messages.addAll(messages.reversed.map((m) => AgentMessage(
+            id: m['id'].toString(),
+            content: m['content'],
+            isFromUser: m['is_from_owner'] ?? true,
+            createdAt: DateTime.parse(m['created_at']),
+            fileUrl: m['file_url'],
+            fileName: m['file_name'],
+          )));
+        });
+      }
+      
+      setState(() => _isLoading = false);
       _scrollToBottom();
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

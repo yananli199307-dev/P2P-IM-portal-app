@@ -57,6 +57,51 @@ class LocalDb {
 
   Future<void> upsertMessage(Message m) => upsertMessages([m]);
 
+  /// 群聊消息：按原始 JSON 存储
+  Future<void> upsertGroupMessages(List<Map<String, dynamic>> rawMsgs) async {
+    if (rawMsgs.isEmpty) return;
+    final d = await db;
+    final batch = d.batch();
+    for (final r in rawMsgs) {
+      final id = r['id'] as int? ?? 0;
+      final gid = r['group_id'] as int? ?? 0;
+      batch.insert('messages', {
+        'id': id,
+        'group_id': gid,
+        'content': r['content'] as String? ?? '',
+        'message_type': r['message_type'] as String? ?? 'text',
+        'file_url': r['file_url'] as String?,
+        'file_name': r['file_name'] as String?,
+        'file_size': r['file_size'] as int?,
+        'is_from_me': (r['is_from_owner'] as bool?) == true ? 1 : 0,
+        'created_at': r['created_at'] as String? ?? DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// 读取群聊消息（旧→新）
+  Future<List<Map<String, dynamic>>> getCachedGroupMessages(int groupId, {int limit = 200}) async {
+    final d = await db;
+    final rows = await d.query('messages',
+      where: 'group_id = ? AND is_deleted = 0',
+      whereArgs: [groupId],
+      orderBy: 'created_at ASC',
+      limit: limit,
+    );
+    return rows.map((r) => {
+      'id': r['id'] as int,
+      'group_id': r['group_id'] as int?,
+      'content': r['content'] as String? ?? '',
+      'message_type': r['message_type'] as String? ?? 'text',
+      'file_url': r['file_url'] as String?,
+      'file_name': r['file_name'] as String?,
+      'file_size': r['file_size'] as int?,
+      'is_from_owner': (r['is_from_me'] as int?) == 1,
+      'created_at': r['created_at'] as String? ?? '',
+    }).toList();
+  }
+
   /// 读取联系人消息（旧→新）
   Future<List<Message>> getContactMessages(int contactId, {int limit = 200}) async {
     final d = await db;

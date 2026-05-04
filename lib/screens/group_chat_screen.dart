@@ -4,6 +4,7 @@ import "package:provider/provider.dart";
 import "../providers/chat_provider.dart";
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import '../services/local_db.dart';
 import '../models/group.dart';
 import '../helpers/file_icon_helper.dart';
 import '../widgets/link_text.dart';
@@ -115,6 +116,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   Future<void> _loadMessages() async {
+    // 1. 先读本地缓存
+    final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
+    if (cached.isNotEmpty && mounted) {
+      setState(() {
+        _messages = cached.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+        _isLoading = false;
+      });
+    }
+    
+    // 2. 后台从服务器同步
     try {
       List<Map<String, dynamic>> messagesData;
       if (widget.group.isOwner) {
@@ -123,11 +134,22 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!);
       }
       if (!mounted) return;
-      setState(() {
-        // 反转消息顺序：服务端返回最新在前，反转后最早在上最新在下
+      
+      // 增量合并
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final newMsgs = messagesData.where((m) => !existingIds.contains(m['id'])).toList();
+      
+      if (newMsgs.isNotEmpty) {
+        final newGroupMsgs = newMsgs.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+        _messages.addAll(newGroupMsgs);
+        _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        LocalDb().upsertGroupMessages(newMsgs);
+      } else if (cached.isEmpty) {
         _messages = messagesData.reversed.map((m) => GroupMessage.fromJson(m)).toList();
-        _isLoading = false;
-      });
+        LocalDb().upsertGroupMessages(messagesData);
+      }
+      
+      setState(() => _isLoading = false);
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;

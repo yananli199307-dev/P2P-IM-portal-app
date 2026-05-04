@@ -13,6 +13,7 @@ class ChatProvider extends ChangeNotifier {
   List<Contact> _contacts = [];
   List<Message> _messages = [];
   Contact? _selectedContact;
+  final Map<int, List<Message>> _msgCache = {};  // contactId → 最近消息窗口
   bool _isLoading = false;
   String? _error;
   Map<String, dynamic>? incomingCall;
@@ -201,28 +202,71 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 选择联系人 — 本地缓存秒开，后台静默同步
+  /// 选择联系人 — SQLite 秒读，增量同步
   void selectContact(Contact contact) {
+    final prevId = _selectedContact?.id;
+    if (prevId != null) {
+      _msgCache[prevId] = List.from(_messages);  // 缓存当前列表
+    }
     _selectedContact = contact;
-    _messages = [];
-    notifyListeners();
-    _loadLocalThenSync(contact.id);
+    
+    // 从缓存或本地 DB 秒取
+    if (_msgCache.containsKey(contact.id)) {
+      _messages = _msgCache[contact.id]!;
+      notifyListeners();
+    } else {
+      _messages = [];
+      notifyListeners();
+      _loadLocalThenSync(contact.id);
+      return;
+    }
+    
+    // 后台增量同步
     markContactMessagesAsRead(contact.id);
+    _syncFromServer(contact.id);
   }
 
   Future<void> _loadLocalThenSync(int contactId) async {
-    // 1. 先读本地缓存，秒开
     try {
       final cached = await _localDb.getContactMessages(contactId);
       if (cached.isNotEmpty && _selectedContact?.id == contactId) {
         _messages = cached;
-        _isLoading = false;
+        _msgCache[contactId] = cached;
         notifyListeners();
       }
     } catch (_) {}
+    if (_selectedContact?.id == contactId) {
+      _syncFromServer(contactId);
+    }
+  }
 
-    // 2. 后台从服务器同步最新消息
-    await loadMessages(contactId);
+  /// 从服务器增量同步，不覆盖已有消息
+  Future<void> _syncFromServer(int contactId) async {
+    try {
+      final serverMsgs = await _apiService.getMessages(contactId);
+      serverMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      
+      if (_selectedContact?.id != contactId) return;  // 已切走
+      
+      // 增量合并：只追加本地没有的新消息
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final newMsgs = serverMsgs.where((m) => !existingIds.contains(m.id)).toList();
+      
+      if (newMsgs.isNotEmpty) {
+        _messages.addAll(newMsgs);
+        _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        _localDb.upsertMessages(newMsgs);
+        _msgCache[contactId] = List.from(_messages);
+      }
+      
+      _error = null;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// 通过 ID 选择联系人
@@ -273,18 +317,22 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 加载消息历史
+  /// 加载消息历史（外部调用时增量合并）
   Future<void> loadMessages(int contactId) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final messages = await _apiService.getMessages(contactId);
-      // 按时间排序（旧的在上面，新的在下面）
       messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-      _messages = messages;
+      if (_selectedContact?.id != contactId) return;
+      
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final newMsgs = messages.where((m) => !existingIds.contains(m.id)).toList();
+      if (newMsgs.isNotEmpty) {
+        _messages.addAll(newMsgs);
+        _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      }
       _error = null;
-      // 存入本地缓存
       _localDb.upsertMessages(messages);
     } catch (e) {
       _error = e.toString();
