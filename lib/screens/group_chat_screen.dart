@@ -125,7 +125,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients && _shouldScrollToBottom) {
-          _scrollController.jumpTo(double.infinity);
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
         }
       });
     });

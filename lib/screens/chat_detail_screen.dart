@@ -26,25 +26,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _shouldScrollToBottom = true;
   int _lastMsgCount = 0;
   bool _initialScrollDone = false;
-
-  void _scrollIfNewMessages(int currentCount) {
-    if (!_shouldScrollToBottom) return;
-    if (!_initialScrollDone && currentCount > 0) {
-      // 初次：双重回调等 ListView 完成所有 item 布局
-      _initialScrollDone = true;
-      _lastMsgCount = currentCount;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients && _shouldScrollToBottom) {
-            _scrollController.jumpTo(double.infinity);
-          }
-        });
-      });
-    } else if (currentCount > _lastMsgCount) {
-      _lastMsgCount = currentCount;
-      _scrollToBottom();
-    }
-  }
   Message? _replyTarget;
   bool _multiSelect = false;
   final Set<int> _selectedIds = {};
@@ -92,12 +73,29 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _scrollToBottom() {
-  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients && _shouldScrollToBottom) {
-        _scrollController.jumpTo(double.infinity);
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
       }
     });
+  }
+
+  void _scrollIfNewMessages(int currentCount) {
+    if (!_shouldScrollToBottom) return;
+    if (!_initialScrollDone && currentCount > 0) {
+      _initialScrollDone = true;
+      _lastMsgCount = currentCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients && _shouldScrollToBottom) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 3);
+          }
+        });
+      });
+    } else if (currentCount > _lastMsgCount) {
+      _lastMsgCount = currentCount;
+      _scrollToBottom();
+    }
   }
 
   void _sendMessage() {
