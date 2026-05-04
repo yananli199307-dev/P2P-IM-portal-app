@@ -283,7 +283,12 @@ class ChatProvider extends ChangeNotifier {
   /// 从服务器增量同步，不覆盖已有消息
   Future<void> _syncFromServer(int contactId) async {
     try {
-      final serverMsgs = await _apiService.getMessages(contactId);
+      // 计算本地最新消息时间，传给服务器做增量同步
+      final cached = _msgCache[contactId];
+      final latest = cached != null && cached.isNotEmpty ? cached.last.createdAt : null;
+      final serverMsgs = await _apiService.getMessages(contactId,
+        since: latest?.toIso8601String(),
+      );
       serverMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       
       if (_selectedContact?.id != contactId) return;  // 已切走

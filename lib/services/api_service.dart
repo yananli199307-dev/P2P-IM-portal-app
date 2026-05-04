@@ -213,11 +213,13 @@ class ApiService {
 
   // ========== 消息 ==========
   
-  Future<List<Message>> getMessages(int contactId, {int limit = 50}) async {
-    final response = await _dio.get('/messages', queryParameters: {
+  Future<List<Message>> getMessages(int contactId, {int limit = 50, String? since}) async {
+    final params = <String, dynamic>{
       'contact_id': contactId,
       'limit': limit,
-    });
+    };
+    if (since != null) params['since'] = since;
+    final response = await _dio.get('/messages', queryParameters: params);
     return (response.data as List)
         .map((json) => Message.fromJson(json))
         .toList();
