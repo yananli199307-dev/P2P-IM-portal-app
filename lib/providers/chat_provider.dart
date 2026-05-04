@@ -161,8 +161,10 @@ class ChatProvider extends ChangeNotifier {
       // 写入本地缓存
       _localDb.upsertMessage(newMessage);
       
-      // 更新最后消息时间
+      // 更新内存缓存（未选中时也缓存，下次秒开）
       if (newMessage.contactId != null) {
+        _msgCache.putIfAbsent(newMessage.contactId!, () => []);
+        _msgCache[newMessage.contactId!]!.add(newMessage);
         _lastMessageTime['contact_${newMessage.contactId}'] = newMessage.createdAt;
         _lastMessagePreview['contact_${newMessage.contactId}'] = newMessage.content;
         notifyListeners();
@@ -246,18 +248,21 @@ class ChatProvider extends ChangeNotifier {
     await _loadLocalThenSync(contactId);
   }
 
-  /// 预加载所有联系人 + My Agent 的最近消息到内存缓存
+  /// 预加载所有聊天的最近消息到内存，并后台从服务器同步离线消息
   void _preloadAllMessages() {
-    // My Agent (contact_id=0)
+    // 1. 本地缓存先放进内存
     _localDb.getContactMessages(0).then((msgs) {
       if (msgs.isNotEmpty) _msgCache[0] = msgs;
     });
-    // 所有联系人
     for (final c in _contacts) {
       _localDb.getContactMessages(c.id).then((msgs) {
         if (msgs.isNotEmpty) _msgCache[c.id] = msgs;
       });
+      // 2. 后台从服务器同步离线消息（fire-and-forget）
+      _syncFromServer(c.id);
     }
+    // My Agent 也同步
+    _syncFromServer(0);
   }
 
   Future<void> _loadLocalThenSync(int contactId) async {
