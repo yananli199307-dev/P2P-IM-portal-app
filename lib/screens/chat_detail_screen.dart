@@ -24,8 +24,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _shouldScrollToBottom = true;
-  int _lastMsgCount = 0;
-  bool _initialScrollDone = false;
   Message? _replyTarget;
   bool _multiSelect = false;
   final Set<int> _selectedIds = {};
@@ -48,6 +46,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    context.read<ChatProvider>().onScrollToBottom = () {
+      _shouldScrollToBottom = true;
+      _scrollToBottom();
+    };
   }
 
   void _onScroll() {
@@ -78,24 +80,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
       }
     });
-  }
-
-  void _scrollIfNewMessages(int currentCount) {
-    if (!_shouldScrollToBottom) return;
-    if (!_initialScrollDone && currentCount > 0) {
-      _initialScrollDone = true;
-      _lastMsgCount = currentCount;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients && _shouldScrollToBottom) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 3);
-          }
-        });
-      });
-    } else if (currentCount > _lastMsgCount) {
-      _lastMsgCount = currentCount;
-      _scrollToBottom();
-    }
   }
 
   void _sendMessage() {
@@ -144,11 +128,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final chatProvider = context.watch<ChatProvider>();
     final contact = chatProvider.selectedContact;
     final messages = chatProvider.messages;
-
-    // 消息列表增长时自动滚底
-    if (messages.isNotEmpty) {
-      _scrollIfNewMessages(messages.length);
-    }
 
     if (contact == null) {
       return const Scaffold(body: Center(child: Text('请选择联系人')));

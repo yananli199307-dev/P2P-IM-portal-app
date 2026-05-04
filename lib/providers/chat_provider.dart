@@ -13,6 +13,7 @@ class ChatProvider extends ChangeNotifier {
   List<Contact> _contacts = [];
   List<Message> _messages = [];
   Contact? _selectedContact;
+  VoidCallback? onScrollToBottom;  // Screen 设置，消息加载完成后调用
   final Map<int, List<Message>> _msgCache = {};  // contactId → 最近消息窗口
   bool _isLoading = false;
   String? _error;
@@ -233,6 +234,7 @@ class ChatProvider extends ChangeNotifier {
         _messages = cached;
         _msgCache[contactId] = cached;
         notifyListeners();
+        onScrollToBottom?.call();  // 缓存加载完成→滚底
       }
     } catch (_) {}
     if (_selectedContact?.id == contactId) {
@@ -257,6 +259,7 @@ class ChatProvider extends ChangeNotifier {
         _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         _localDb.upsertMessages(newMsgs);
         _msgCache[contactId] = List.from(_messages);
+        onScrollToBottom?.call();  // 有新消息→滚底
       }
       
       _error = null;
