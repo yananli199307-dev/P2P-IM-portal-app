@@ -96,6 +96,10 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         _isLoading = false;
       });
       _scrollToBottom();
+      // 缓存最新消息在1分钟内，跳过服务器同步
+      if (cached.last.createdAt.isAfter(DateTime.now().subtract(const Duration(seconds: 60)))) {
+        return;
+      }
     } else {
       setState(() => _isLoading = true);  // 无本地缓存，显示加载圈
     }

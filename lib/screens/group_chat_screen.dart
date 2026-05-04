@@ -132,14 +132,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   Future<void> _loadMessages() async {
-    // 1. 先读本地缓存
-    final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
-    if (cached.isNotEmpty && mounted) {
-      setState(() {
-        _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();  // LocalDb已ASC，不反转
-        _isLoading = false;
-      });
-      _scrollToBottom();
+    // 1. 群主：先读本地缓存；非群主：跳过（group_id 映射不一致）
+    if (widget.group.isOwner) {
+      final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
+      if (cached.isNotEmpty && mounted) {
+        setState(() {
+          _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
     }
     
     // 2. 后台从服务器同步
