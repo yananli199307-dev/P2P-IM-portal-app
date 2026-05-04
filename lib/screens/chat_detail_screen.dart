@@ -47,9 +47,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     context.read<ChatProvider>().onScrollToBottom = () {
-      // 跳过 _shouldScrollToBottom 守卫，直接跳到底
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
+        // 双重回调等 ListView 完全渲染：第一帧 setState→build，第二帧布局完成
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
+        });
       });
     };
   }
