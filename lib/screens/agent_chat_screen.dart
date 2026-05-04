@@ -38,7 +38,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<AgentMessage> _messages = [];
   final WebSocketService _wsService = WebSocketService();
-  bool _isLoading = false;  // 默认 false，首次无缓存时才显示
+  bool _isLoading = true;  // 默认显示加载中，和群聊一致
   bool _isSending = false;
   int _panelOpen = 0;
 
@@ -96,10 +96,6 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         _isLoading = false;
       });
       _scrollToBottom();
-      // 缓存最新消息在1分钟内，跳过服务器同步
-      if (cached.last.createdAt.isAfter(DateTime.now().subtract(const Duration(seconds: 60)))) {
-        return;
-      }
     } else {
       setState(() => _isLoading = true);  // 无本地缓存，显示加载圈
     }

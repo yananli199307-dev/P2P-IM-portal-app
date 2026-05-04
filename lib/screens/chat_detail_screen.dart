@@ -47,8 +47,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     context.read<ChatProvider>().onScrollToBottom = () {
-      _shouldScrollToBottom = true;
-      _scrollToBottom();
+      // 跳过 _shouldScrollToBottom 守卫，直接跳到底
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
+      });
     };
   }
 
