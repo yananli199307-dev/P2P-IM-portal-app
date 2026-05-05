@@ -185,7 +185,7 @@ class _CallScreenState extends State<CallScreen> {
                     },
                   ),
                   _btn(Icons.call_end, Colors.red, () {
-                    context.read<ChatProvider>().webrtc.hangup();
+                    context.read<ChatProvider>().hangupCall();
                     Navigator.pop(c);
                   }),
                   if (widget.isVideo)

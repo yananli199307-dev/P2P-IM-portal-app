@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/update_service.dart';
+import '../widgets/update_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -202,6 +204,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ListTile(
+              leading: const Icon(Icons.system_update, color: Colors.blue),
+              title: const Text('检查更新'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _checkUpdate(context),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 退出登录
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('退出登录', style: TextStyle(color: Colors.red)),
               onTap: () => _showLogoutDialog(context),
@@ -212,5 +228,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _checkUpdate(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    final info = await UpdateService().checkUpdate();
+    if (!context.mounted) return;
+    Navigator.pop(context);
+    if (info == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('检查失败,请稍后重试')),
+      );
+      return;
+    }
+    if (!info.hasUpdate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已是最新版本 v${info.currentVersion}')),
+      );
+      return;
+    }
+    await UpdateDialog.show(context, info);
   }
 }

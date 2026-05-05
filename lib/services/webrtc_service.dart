@@ -21,6 +21,11 @@ class WebRTCService {
   int? peerUserId;          // 当前通话对端的 user id(target_user_id)
   int? peerContactId;       // 对端 contact.id(本地)
   bool isVideo = false;
+  DateTime? startedAt;      // remote description 设置成功(媒体真正连通起算)
+  bool _remoteDescSet = false;
+  final List<RTCIceCandidate> _pendingIce = [];
+
+  bool get isCaller => _isCaller;
 
   int get callSeconds => _callSeconds;
   MediaStream? get localStream => _localStream;
@@ -82,23 +87,42 @@ class WebRTCService {
       _pc!.addTrack(t, _localStream!);
     }
     await _pc!.setRemoteDescription(RTCSessionDescription(offerSdp, 'offer'));
+    _remoteDescSet = true;
+    await _flushPendingIce();
     final answer = await _pc!.createAnswer();
     await _pc!.setLocalDescription(answer);
     onSignal?.call('call_accept', {'sdp': answer.sdp});
+    startedAt = DateTime.now();
     _startDuration();
   }
 
   Future<void> onCallAccepted(String answerSdp) async {
     await _pc!.setRemoteDescription(RTCSessionDescription(answerSdp, 'answer'));
+    _remoteDescSet = true;
+    await _flushPendingIce();
+    startedAt = DateTime.now();
     _startDuration();
   }
 
-  void onIceCandidate(Map<String, dynamic> data) {
-    _pc?.addCandidate(RTCIceCandidate(
+  Future<void> onIceCandidate(Map<String, dynamic> data) async {
+    final cand = RTCIceCandidate(
       data['candidate'] ?? '',
       data['sdpMid'] ?? '',
       data['sdpMLineIndex'],
-    ));
+    );
+    if (!_remoteDescSet || _pc == null) {
+      _pendingIce.add(cand);
+      return;
+    }
+    await _pc!.addCandidate(cand);
+  }
+
+  Future<void> _flushPendingIce() async {
+    if (_pc == null) return;
+    for (final c in _pendingIce) {
+      await _pc!.addCandidate(c);
+    }
+    _pendingIce.clear();
   }
 
   void rejectCall() {
@@ -151,6 +175,9 @@ class WebRTCService {
     _pc = null;
     peerUserId = null;
     peerContactId = null;
+    startedAt = null;
+    _remoteDescSet = false;
+    _pendingIce.clear();
   }
 
   void dispose() => _cleanup();

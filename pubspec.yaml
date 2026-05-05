@@ -40,6 +40,11 @@ dependencies:
   # WebRTC (后续添加)
   flutter_webrtc: ^1.0.0
 
+  # 版本自更新(GitHub Release)
+  package_info_plus: ^8.0.0
+  open_filex: ^4.5.0
+  permission_handler: ^11.3.0
+
 dev_dependencies:
   url_launcher: ^6.3.0
   flutter_test:

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
+import '../services/update_service.dart';
+import '../widgets/update_dialog.dart';
 import 'contacts_book_screen.dart';
 import 'chat_screen.dart';
 import 'me_screen.dart';
@@ -24,6 +26,14 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // 初始化 WebSocket
     _initWebSocket();
+    // 启动时静默检查更新(失败不打扰)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
+  }
+
+  Future<void> _checkUpdate() async {
+    final info = await UpdateService().checkUpdate();
+    if (!mounted || info == null || !info.hasUpdate) return;
+    UpdateDialog.show(context, info);
   }
   
   void _initWebSocket() async {
@@ -31,9 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final chatProvider = context.read<ChatProvider>();
     
     if (authProvider.user != null && authProvider.portalUrl != null) {
-      // 初始化 WebSocket 连接
-      // WebSocket：Web 走代理，手机直连 Portal
-      final wsBaseUrl = kIsWeb ? 'http://localhost:8080' : authProvider.portalUrl!;
+      // 初始化 WebSocket 连接 — Web 部署时用真实 Portal URL
+      final wsBaseUrl = authProvider.portalUrl!;
       await chatProvider.initWebSocket(
         baseUrl: wsBaseUrl,
         userId: authProvider.user!.id.toString(),

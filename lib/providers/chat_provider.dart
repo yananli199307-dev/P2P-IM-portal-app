@@ -87,7 +87,8 @@ class ChatProvider extends ChangeNotifier {
     
     await _wsService.connect(
       baseUrl: baseUrl,
-      token: apiKey,
+      // 后端 /ws 只接受 user_id 数字鉴权,不要传 JWT(access_token)
+      token: userId,
       onMessage: _handleWebSocketMessage,
       onConnect: () {
         _isConnected = true;
@@ -123,6 +124,7 @@ class ChatProvider extends ChangeNotifier {
           ...?data,
           'from_user_id': message['from_user_id'],
         };
+        // 主叫已写"呼叫中"那条记录;此处记录被叫端收到的来电时间(可选)
         notifyListeners();
         break;
       case "call_accept":
@@ -132,17 +134,19 @@ class ChatProvider extends ChangeNotifier {
         }
         break;
       case "call_reject":
+        recordCallEnd('rejected');
         _webrtc.onPeerHangup();
         incomingCall = null;
         notifyListeners();
         break;
       case "call_hangup":
+        recordCallEnd('hangup');
         _webrtc.onPeerHangup();
         incomingCall = null;
         notifyListeners();
         break;
       case "call_ice":
-        // ICE candidate 增量
+        // ICE candidate 增量(remote desc 未就绪时会自动缓冲)
         if (data != null) {
           _webrtc.onIceCandidate(Map<String, dynamic>.from(data));
         }
@@ -612,6 +616,39 @@ class ChatProvider extends ChangeNotifier {
     });
     incomingCall = null;
     notifyListeners();
+  }
+
+  /// 主动挂断 — 由 CallScreen 挂断按钮调用
+  Future<void> hangupCall() async {
+    await recordCallEnd('hangup');
+    _webrtc.hangup();
+    notifyListeners();
+  }
+
+  /// 把通话结果写入聊天记录(只有主叫端写,被叫端通过 new_message 同步收到)
+  Future<void> recordCallEnd(String reason) async {
+    final peerContactId = _webrtc.peerContactId;
+    final isCaller = _webrtc.isCaller;
+    final isVideoCall = _webrtc.isVideo;
+    final startedAt = _webrtc.startedAt;
+    if (peerContactId == null || !isCaller) return;
+    final kind = isVideoCall ? '视频通话' : '语音通话';
+    String content;
+    if (startedAt != null) {
+      final sec = DateTime.now().difference(startedAt).inSeconds;
+      final m = (sec ~/ 60).toString().padLeft(2, '0');
+      final s = (sec % 60).toString().padLeft(2, '0');
+      content = '📞 $kind 时长 $m:$s';
+    } else if (reason == 'rejected') {
+      content = '📞 $kind 对方已拒接';
+    } else {
+      content = '📞 $kind 未接通';
+    }
+    try {
+      await _apiService.sendMessage(peerContactId, content);
+    } catch (e) {
+      debugPrint('[Call] recordCallEnd failed: $e');
+    }
   }
 
   /// 清除来电状态(UI 已处理)
