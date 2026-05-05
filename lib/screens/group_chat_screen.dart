@@ -121,47 +121,33 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
 
   Future<void> _loadMessages() async {
-    // 1. 先读本地缓存
     final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
     if (cached.isNotEmpty && mounted) {
       setState(() {
         _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();
         _isLoading = false;
       });
-    }
-    
-    // 2. 后台从服务器同步
-    try {
-      List<Map<String, dynamic>> messagesData;
-      if (widget.group.isOwner) {
-        final latest = _messages.isNotEmpty ? _messages.last.createdAt : null;
-        messagesData = await ApiService().getGroupMessages(widget.group.id, since: latest?.toIso8601String());
-      } else {
-        final latest = _messages.isNotEmpty ? _messages.last.createdAt : null;
-        messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!, since: latest?.toIso8601String());
-        // 非群主：用本地 ID 覆盖消息的 group_id，保证缓存可命中
-        for (final m in messagesData) { m['group_id'] = widget.group.id; }
-      }
-      if (!mounted) return;
-      
-      // 增量合并
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMsgs = messagesData.where((m) => !existingIds.contains(m['id'])).toList();
-      
-      if (newMsgs.isNotEmpty) {
-        final newGroupMsgs = newMsgs.reversed.map((m) => GroupMessage.fromJson(m)).toList();
-        _messages.addAll(newGroupMsgs);
-        _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        LocalDb().upsertGroupMessages(newMsgs);
-      } else if (_messages.isEmpty) {
-        _messages = messagesData.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+    } else if (mounted) {
+      setState(() => _isLoading = true);
+      try {
+        List<Map<String, dynamic>> messagesData;
+        if (widget.group.isOwner) {
+          messagesData = await ApiService().getGroupMessages(widget.group.id);
+        } else {
+          messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!);
+          for (final m in messagesData) { m['group_id'] = widget.group.id; }
+        }
+        if (!mounted) return;
+        setState(() {
+          _messages = messagesData.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+          _isLoading = false;
+        });
         LocalDb().upsertGroupMessages(messagesData);
+        
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
       }
-      
-      setState(() => _isLoading = false);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
     }
   }
 

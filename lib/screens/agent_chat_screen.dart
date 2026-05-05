@@ -101,7 +101,6 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Future<void> _loadHistory() async {
-    // 1. 先读本地缓存
     final cached = await LocalDb().getContactMessages(0);
     if (cached.isNotEmpty && mounted) {
       setState(() {
@@ -116,36 +115,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         )));
         _isLoading = false;
       });
-
-    } else {
-      setState(() => _isLoading = true);  // 无本地缓存，显示加载圈
-    }
-    
-    // 2. 后台同步服务器
-    try {
-      final latest = _messages.isNotEmpty ? _messages.last.createdAt : null;
-      final messages = await ApiService().getAgentMessages(since: latest?.toIso8601String());
-      if (!mounted) return;
-      
-      // 用内容去重（同一分钟内相同内容的视为重复）
-      final now = DateTime.now();
-      final existingContents = _messages
-        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
-        .map((m) => m.content).toSet();
-      final newMsgs = messages.where((m) => !existingContents.contains(m['content'])).toList();
-      
-      if (newMsgs.isNotEmpty) {
-        setState(() {
-          _messages.addAll(newMsgs.reversed.map((m) => AgentMessage(
-            id: m['id'].toString(),
-            content: m['content'],
-            isFromUser: m['is_from_owner'] ?? true,
-            createdAt: DateTime.parse(m['created_at']),
-            fileUrl: m['file_url'],
-            fileName: m['file_name'],
-          )));
-        });
-      } else if (cached.isEmpty) {
+    } else if (mounted) {
+      setState(() => _isLoading = true);
+      try {
+        final messages = await ApiService().getAgentMessages();
+        if (!mounted) return;
         setState(() {
           _messages.addAll(messages.reversed.map((m) => AgentMessage(
             id: m['id'].toString(),
@@ -155,13 +129,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             fileUrl: m['file_url'],
             fileName: m['file_name'],
           )));
+          _isLoading = false;
         });
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
       }
-      
-      setState(() => _isLoading = false);
-
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
