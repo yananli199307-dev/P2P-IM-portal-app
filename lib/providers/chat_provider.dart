@@ -360,19 +360,6 @@ class ChatProvider extends ChangeNotifier {
     if (_selectedContact?.id == contactId) {
       _syncFromServer(contactId);
     }
-  }(int contactId) async {
-    try {
-      final cached = await _localDb.getContactMessages(contactId);
-      if (cached.isNotEmpty && _selectedContact?.id == contactId) {
-        _messages = cached;
-        _msgCache[contactId] = cached;
-        notifyListeners();
-        onScrollToBottom?.call();  // 缓存加载完成→滚底
-      }
-    } catch (_) {}
-    if (_selectedContact?.id == contactId) {
-      _syncFromServer(contactId);
-    }
   }
 
   /// 从服务器增量同步，不覆盖已有消息
