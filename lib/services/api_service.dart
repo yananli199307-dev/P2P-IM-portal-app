@@ -143,9 +143,11 @@ class ApiService {
 
   /// 发送添加联系人申请（和 Web 前端一致，等对方同意后才创建）
   Future<void> addContact(String name, String portalUrl) async {
+    final cleaned = portalUrl.trim().replaceAll(RegExp(r'\s+'), '');
+    final normalizedUrl = cleaned.startsWith('http') ? cleaned : 'https://$cleaned';
     final sharedKey = 'sk_${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}${List.generate(8, (_) => (Random().nextDouble() * 36).toInt().toRadixString(36)).join()}';
     await _dio.post('/contact-requests/apply', data: {
-      'target_portal': portalUrl,
+      'target_portal': normalizedUrl,
       'requester_name': name,
       'requester_portal': _portalUrl ?? '',
       'shared_key': sharedKey,

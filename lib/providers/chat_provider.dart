@@ -15,6 +15,7 @@ class ChatProvider extends ChangeNotifier {
   Contact? _selectedContact;
   VoidCallback? onScrollToBottom;
   void Function(String content)? onAgentReply;  // Screen 设置，消息加载完成后调用
+  void Function(Map<String, dynamic> data)? onContactRequestReceived; // 收到新加好友申请的回调
   final Map<int, List<Message>> _msgCache = {};  // contactId → 最近消息窗口
   bool _isLoading = false;
   String? _error;
@@ -125,6 +126,14 @@ class ChatProvider extends ChangeNotifier {
         break;
       case 'new_message':
         _handleNewMessage(data);
+        break;
+      case 'contact_added':
+        // 联系人列表变化(本机同意了申请,或对方同意了我的申请回调过来)
+        loadContacts();
+        break;
+      case 'request_received':
+        // 收到新的加好友申请,通知 UI 刷新"新的请求"列表
+        onContactRequestReceived?.call(data ?? {});
         break;
       case 'agent_reply':
         final content = data?['content'] ?? message['content'] ?? '';
