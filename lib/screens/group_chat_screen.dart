@@ -170,9 +170,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     // 先本地显示
     final tempMsg = GroupMessage(
       id: DateTime.now().millisecondsSinceEpoch,
-      groupId: widget.group.id,
       content: content,
       senderName: '我',
+      isFromOwner: true,
       createdAt: DateTime.now(),
     );
     setState(() {
