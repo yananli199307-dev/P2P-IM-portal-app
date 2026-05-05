@@ -273,7 +273,6 @@ class ChatProvider extends ChangeNotifier {
     _syncAgentFromServer();
   }
 
-  final Map<int, List<Map<String, dynamic>>> _groupCache = {};
 
   void _preloadAllGroups() async {
     try {
