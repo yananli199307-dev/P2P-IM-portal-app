@@ -262,8 +262,8 @@ class ChatProvider extends ChangeNotifier {
       // 2. 后台从服务器同步离线消息（fire-and-forget）
       _syncFromServer(c.id);
     }
-    // My Agent 也同步
-    _syncFromServer(0);
+    // My Agent 用 getAgentMessages（能同时查到用户消息和 Agent 回复）
+    _syncAgentFromServer();
   }
 
   final Map<int, List<Map<String, dynamic>>> _groupCache = {};
@@ -324,7 +324,29 @@ class ChatProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _loadLocalThenSync(int contactId) async {
+  Future<void> _syncAgentFromServer() async {
+    try {
+      final cached = _msgCache[0];
+      final latest = cached != null && cached.isNotEmpty ? cached.first.createdAt : null;
+      final serverMsgs = await _apiService.getAgentMessages(since: latest?.toIso8601String());
+      final newMsgs = serverMsgs.where((m) => !cached!.any((c) => c.id.toString() == m['id'].toString())).toList();
+      if (newMsgs.isNotEmpty) {
+        // 存入 _msgCache[0]
+        final converted = newMsgs.reversed.map((m) => Message(
+          id: int.tryParse(m['id'].toString()) ?? 0,
+          contactId: 0,
+          content: m['content'] ?? '',
+          type: MessageType.text,
+          isFromMe: m['is_from_owner'] == true,
+          createdAt: DateTime.tryParse(m['created_at'] ?? '') ?? DateTime.now(),
+        )).toList();
+        _msgCache[0] = [...converted, ...(cached ?? [])];
+        // 存 LocalDb
+        _localDb.upsertMessages(converted);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }(int contactId) async {
     try {
       final cached = await _localDb.getContactMessages(contactId);
       if (cached.isNotEmpty && _selectedContact?.id == contactId) {
