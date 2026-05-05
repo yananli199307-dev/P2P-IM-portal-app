@@ -4,11 +4,13 @@ import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 import '../services/local_db.dart';
+import '../services/webrtc_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   final WebSocketService _wsService = WebSocketService();
   final LocalDb _localDb = LocalDb();
+  final WebRTCService _webrtc = WebRTCService();
 
   List<Contact> _contacts = [];
   List<Message> _messages = [];
@@ -116,13 +118,34 @@ class ChatProvider extends ChangeNotifier {
     switch (type) {
 
       case "call_invite":
-        incomingCall = data;
+        // 来电:记录信令,UI 监听 incomingCall 弹窗
+        incomingCall = {
+          ...?data,
+          'from_user_id': message['from_user_id'],
+        };
+        notifyListeners();
         break;
       case "call_accept":
+        // 主叫:对方接听,把 answer SDP 喂给 WebRTC
+        if (data?['sdp'] != null) {
+          _webrtc.onCallAccepted(data['sdp']);
+        }
+        break;
       case "call_reject":
+        _webrtc.onPeerHangup();
+        incomingCall = null;
+        notifyListeners();
+        break;
       case "call_hangup":
+        _webrtc.onPeerHangup();
+        incomingCall = null;
+        notifyListeners();
+        break;
       case "call_ice":
-        _callSignal = {"type": type, "data": data};
+        // ICE candidate 增量
+        if (data != null) {
+          _webrtc.onIceCandidate(Map<String, dynamic>.from(data));
+        }
         break;
       case 'new_message':
         _handleNewMessage(data);
@@ -543,6 +566,71 @@ class ChatProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
     }
+  }
+
+  // ========== WebRTC 通话 ==========
+
+  /// 暴露 WebRTC 单例给 UI(CallScreen)
+  WebRTCService get webrtc => _webrtc;
+
+  /// 发起通话 — 由 +号面板/通话按钮调用
+  /// targetUserId: 对端 user_id;targetContactId: 对端 contact.id
+  Future<void> startCall({
+    required int targetUserId,
+    required int targetContactId,
+    required bool video,
+  }) async {
+    _webrtc.peerUserId = targetUserId;
+    _webrtc.peerContactId = targetContactId;
+    _webrtc.onSignal = _sendCallSignal;
+    await _webrtc.init();
+    await _webrtc.startCall(video);
+  }
+
+  /// 接听来电 — 由 IncomingCall UI 调用
+  Future<void> acceptIncomingCall() async {
+    final ic = incomingCall;
+    if (ic == null) return;
+    final sdp = ic['sdp'] as String?;
+    final videoFlag = ic['type'] == 'video';
+    final fromUserId = ic['from_user_id'] as int?;
+    if (sdp == null) return;
+    _webrtc.peerUserId = fromUserId;
+    _webrtc.onSignal = _sendCallSignal;
+    await _webrtc.init();
+    await _webrtc.acceptCall(sdp, videoFlag);
+    incomingCall = null;
+    notifyListeners();
+  }
+
+  /// 拒绝来电
+  void rejectIncomingCall() {
+    final fromUserId = incomingCall?['from_user_id'] as int?;
+    _wsService.sendMessage('call_reject', {
+      'target_user_id': fromUserId,
+      'data': {},
+    });
+    incomingCall = null;
+    notifyListeners();
+  }
+
+  /// 清除来电状态(UI 已处理)
+  void clearIncomingCall() {
+    incomingCall = null;
+    notifyListeners();
+  }
+
+  /// WebRTCService 回调 → 把信令通过 WebSocket 发出去
+  void _sendCallSignal(String type, Map<String, dynamic> data) {
+    final target = _webrtc.peerUserId;
+    if (target == null) {
+      debugPrint('[Call] _sendCallSignal: no peerUserId');
+      return;
+    }
+    _wsService.sendMessage(type, {
+      'target_user_id': target,
+      'data': data,
+    });
   }
 
   @override

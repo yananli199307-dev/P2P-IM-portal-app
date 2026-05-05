@@ -7,6 +7,7 @@ import 'contacts_book_screen.dart';
 import 'chat_screen.dart';
 import 'me_screen.dart';
 import 'explore_screen.dart';
+import 'call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,10 +44,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  bool _showingIncoming = false;
+
   @override
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
     final totalUnread = chatProvider.totalUnreadCount;
+
+    // 监听来电:有 incomingCall 时弹出全屏来电界面
+    if (chatProvider.incomingCall != null && !_showingIncoming) {
+      _showingIncoming = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showIncomingDialog(chatProvider);
+      });
+    }
     
     final screens = [
       const ChatScreen(),
@@ -99,5 +110,50 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showIncomingDialog(ChatProvider provider) async {
+    final ic = provider.incomingCall;
+    if (ic == null) {
+      _showingIncoming = false;
+      return;
+    }
+    final isVideo = ic['type'] == 'video';
+    // 尝试根据 from_user_id 找联系人显示名(简化:暂用 "对方")
+    final peerName = '对方';
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(isVideo ? '视频通话邀请' : '语音通话邀请'),
+        content: Text('$peerName 邀请你${isVideo ? "视频" : "语音"}通话'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('拒绝', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('接听'),
+          ),
+        ],
+      ),
+    );
+
+    _showingIncoming = false;
+    if (!mounted) return;
+    if (accepted == true) {
+      await provider.acceptIncomingCall();
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CallScreen(peerName: peerName, isVideo: isVideo),
+        ),
+      );
+    } else {
+      provider.rejectIncomingCall();
+    }
   }
 }

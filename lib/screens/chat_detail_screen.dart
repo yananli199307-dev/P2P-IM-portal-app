@@ -240,13 +240,28 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  void _startCall(bool isVideo) {
+  Future<void> _startCall(bool isVideo) async {
     setState(() => _panelOpen = 0);
-    final contact = context.read<ChatProvider>().selectedContact;
+    final provider = context.read<ChatProvider>();
+    final contact = provider.selectedContact;
     if (contact == null) return;
-    Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(
-      peerName: contact.displayName, isIncoming: false, isVideo: isVideo,
-    )));
+    try {
+      // 跨 Portal 默认对端 user_id = 1(每个 Portal 只一个 admin)
+      await provider.startCall(
+        targetUserId: 1,
+        targetContactId: contact.id,
+        video: isVideo,
+      );
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => CallScreen(
+        peerName: contact.displayName, isVideo: isVideo,
+      )));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('发起通话失败: $e')),
+      );
+    }
   }
 
   void _callPlaceholder(String type) {
