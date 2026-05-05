@@ -166,6 +166,21 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (content.isEmpty) return;
     final reply = _replyTarget;
     _messageController.clear();
+    
+    // 先本地显示
+    final tempMsg = GroupMessage(
+      id: DateTime.now().millisecondsSinceEpoch,
+      groupId: widget.group.id,
+      content: content,
+      senderName: '我',
+      isFromOwner: true,
+      createdAt: DateTime.now(),
+    );
+    setState(() {
+      _messages.add(tempMsg);
+      _replyTarget = null;
+    });
+    
     try {
       await ApiService().sendGroupMessage(
         widget.group.id, content,
@@ -175,10 +190,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         replyToContent: reply != null ? (reply.content.length > 50 ? '${reply.content.substring(0, 50)}...' : reply.content) : null,
         replyToSenderName: reply?.isFromOwner == true ? '群主' : (reply?.senderName ?? '成员'),
       );
-      if (mounted) setState(() => _replyTarget = null);
-      // 更新消息列表排序
       context.read<ChatProvider>().updateGroupLastMessage(widget.group.id, content);
-      _loadMessages();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('发送失败: $e')));
     }
