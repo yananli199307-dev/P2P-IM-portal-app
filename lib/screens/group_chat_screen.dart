@@ -121,6 +121,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
 
   Future<void> _loadMessages() async {
+    // 1. 先查内存缓存
+    final cached0 = context.read<ChatProvider>().groupCache[widget.group.id];
+    if (cached0 != null && cached0.isNotEmpty && mounted) {
+      setState(() {
+        _messages = cached0.map((m) => GroupMessage.fromJson(m)).toList();
+        _isLoading = false;
+      });
+      return;
+    }
+    // 2. 内存无 → 读 LocalDb
     final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
     if (cached.isNotEmpty && mounted) {
       setState(() {

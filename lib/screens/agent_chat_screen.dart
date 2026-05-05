@@ -101,6 +101,21 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Future<void> _loadHistory() async {
+    // 1. 先查内存缓存（私聊级别速度）
+    final cached0 = context.read<ChatProvider>().msgCache[0];
+    if (cached0 != null && cached0.isNotEmpty && mounted) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(cached0.map((m) => AgentMessage(
+          id: m.id.toString(), content: m.content,
+          isFromUser: m.isFromMe, createdAt: m.createdAt,
+          fileUrl: m.fileUrl, fileName: m.fileName,
+        )));
+        _isLoading = false;
+      });
+      return;
+    }
+    // 2. 内存无 → 读 LocalDb
     final cached = await LocalDb().getContactMessages(0);
     if (cached.isNotEmpty && mounted) {
       setState(() {
@@ -155,15 +170,19 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       _isSending = true;
     });
     
-    // 写入本地缓存，下次打开秒出
-    LocalDb().upsertMessage(Message(
+    // 写入本地缓存 + 内存缓存
+    final cachedMsg = Message(
       id: msgId,
       contactId: 0,
       content: content,
       type: MessageType.text,
       isFromMe: true,
       createdAt: msgTime,
-    ));
+    );
+    LocalDb().upsertMessage(cachedMsg);
+    final cp = context.read<ChatProvider>();
+    cp.msgCache.putIfAbsent(0, () => []);
+    cp.msgCache[0]!.add(cachedMsg);
 
     try {
       await ApiService().sendAgentMessage(content);
