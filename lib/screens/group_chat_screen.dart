@@ -146,9 +146,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     try {
       List<Map<String, dynamic>> messagesData;
       if (widget.group.isOwner) {
-        messagesData = await ApiService().getGroupMessages(widget.group.id);
+        final latest = _messages.isNotEmpty ? _messages.last.createdAt : null;
+        messagesData = await ApiService().getGroupMessages(widget.group.id, since: latest?.toIso8601String());
       } else {
-        messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!);
+        final latest = _messages.isNotEmpty ? _messages.last.createdAt : null;
+        messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!, since: latest?.toIso8601String());
         // 非群主：用本地 ID 覆盖消息的 group_id，保证缓存可命中
         for (final m in messagesData) { m['group_id'] = widget.group.id; }
       }

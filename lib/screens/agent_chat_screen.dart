@@ -117,7 +117,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     
     // 2. 后台同步服务器
     try {
-      final messages = await ApiService().getAgentMessages();
+      final latest = _messages.isNotEmpty ? _messages.last.createdAt : null;
+      final messages = await ApiService().getAgentMessages(since: latest?.toIso8601String());
       if (!mounted) return;
       
       final existingIds = _messages.map((m) => m.id).toSet();

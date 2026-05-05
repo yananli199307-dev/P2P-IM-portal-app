@@ -317,18 +317,18 @@ class ApiService {
   }
 
   // 获取群消息（群主使用数字 ID）
-  Future<List<Map<String, dynamic>>> getGroupMessages(int groupId, {int limit = 50}) async {
-    final response = await _dio.get('/messages/group/$groupId', queryParameters: {
-      'limit': limit,
-    });
+  Future<List<Map<String, dynamic>>> getGroupMessages(int groupId, {int limit = 50, String? since}) async {
+    final params = <String, dynamic>{'limit': limit};
+    if (since != null) params['since'] = since;
+    final response = await _dio.get('/messages/group/$groupId', queryParameters: params);
     return List<Map<String, dynamic>>.from(response.data);
   }
 
   // 获取群消息（成员使用 UUID）
-  Future<List<Map<String, dynamic>>> getGroupMessagesByUuid(String groupUuid, {int limit = 50}) async {
-    final response = await _dio.get('/messages/group/uuid/$groupUuid', queryParameters: {
-      'limit': limit,
-    });
+  Future<List<Map<String, dynamic>>> getGroupMessagesByUuid(String groupUuid, {int limit = 50, String? since}) async {
+    final params = <String, dynamic>{'limit': limit};
+    if (since != null) params['since'] = since;
+    final response = await _dio.get('/messages/group/uuid/$groupUuid', queryParameters: params);
     return List<Map<String, dynamic>>.from(response.data);
   }
 
@@ -401,13 +401,15 @@ class ApiService {
   // ========== My Agent ==========
 
   /// 获取 My Agent 历史消息
-  Future<List<Map<String, dynamic>>> getAgentMessages({int limit = 50}) async {
+  Future<List<Map<String, dynamic>>> getAgentMessages({int limit = 50, String? since}) async {
     final userId = await getToken() ?? '1';
-    final response = await _dio.get('/internal/messages', queryParameters: {
+    final params = <String, dynamic>{
       'contact_id': 0,
       'limit': limit,
       'token': userId,
-    });
+    };
+    if (since != null) params['since'] = since;
+    final response = await _dio.get('/internal/messages', queryParameters: params);
     return List<Map<String, dynamic>>.from(response.data);
   }
 
