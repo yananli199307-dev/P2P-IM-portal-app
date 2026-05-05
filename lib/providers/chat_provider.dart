@@ -273,12 +273,37 @@ class ChatProvider extends ChangeNotifier {
       final groups = await _apiService.getGroups();
       for (final g in groups) {
         final id = g['id'] as int? ?? 0;
+        final isOwner = g['is_owner'] == true;
+        final uuid = g['group_uuid'] as String? ?? g['group_id'] as String?;
         if (id > 0) {
           final cached = await _localDb.getCachedGroupMessages(id);
           if (cached.isNotEmpty) _groupCache[id] = cached;
-          _syncGroupFromServer(id);
+          if (isOwner) {
+            _syncGroupFromServer(id);
+          } else if (uuid != null) {
+            _syncNonOwnerGroup(uuid, id);
+          }
         }
       }
+    } catch (_) {}
+  }
+
+  Future<void> _syncNonOwnerGroup(String uuid, int localId) async {
+    try {
+      final serverMsgs = await _apiService.getGroupMessagesByUuid(uuid);
+      // 覆盖为本地 ID 保证缓存一致
+      for (final m in serverMsgs) { m['group_id'] = localId; }
+      final cached = _groupCache[localId] ?? [];
+      final existingIds = cached.map((m) => m['id']).toSet();
+      final newMsgs = serverMsgs.where((m) => !existingIds.contains(m['id'])).toList();
+      if (newMsgs.isNotEmpty) {
+        _groupCache[localId] = [...cached, ...newMsgs];
+        _localDb.upsertGroupMessages(newMsgs);
+      } else if (cached.isEmpty) {
+        _groupCache[localId] = serverMsgs;
+        _localDb.upsertGroupMessages(serverMsgs);
+      }
+      notifyListeners();
     } catch (_) {}
   }
 
