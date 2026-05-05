@@ -58,7 +58,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             createdAt: DateTime.now(),
           ));
         });
-        _scrollToBottom();
+  
       }
     };
     
@@ -110,7 +110,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         )));
         _isLoading = false;
       });
-      _scrollToBottom();
+
     } else {
       setState(() => _isLoading = true);  // 无本地缓存，显示加载圈
     }
@@ -149,20 +149,10 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       }
       
       setState(() => _isLoading = false);
-      _scrollToBottom();
+
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-        }
-      });
-    });
   }
 
   Future<void> _sendMessage() async {
@@ -182,7 +172,6 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       ));
       _isSending = true;
     });
-    _scrollToBottom();
     
     // 写入本地缓存，下次打开秒出
     LocalDb().upsertMessage(Message(
