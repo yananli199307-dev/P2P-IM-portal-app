@@ -34,9 +34,11 @@ class AuthProvider extends ChangeNotifier {
       _token = await _apiService.getToken();
       _portalUrl = await _apiService.getPortalUrl();
       
-      if (_portalUrl != null) {
+      if (_portalUrl != null && _portalUrl!.isNotEmpty) {
         _isInitialized = true;
         await _apiService.setPortalUrl(_portalUrl!);
+      } else {
+        _portalUrl = null; // 残留的空字符串清掉,避免误判 isInitialized
       }
       
       if (_token != null) {

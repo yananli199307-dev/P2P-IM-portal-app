@@ -46,23 +46,30 @@ class ApiService {
 
   // 设置 Portal URL
   Future<void> setPortalUrl(String url) async {
-    _portalUrl = url;
+    final cleaned = url.trim().replaceAll(RegExp(r'\s+'), '');
+    if (cleaned.isEmpty) return; // 防御:空字符串不要污染 baseUrl
+    final normalized = cleaned.startsWith('http') ? cleaned : 'https://$cleaned';
+    _portalUrl = normalized;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('portal_url', url);
+    await prefs.setString('portal_url', normalized);
     // 同步更新 Dio 的 baseUrl
-    updateBaseUrl('$url/api');
+    updateBaseUrl('$normalized/api');
   }
 
   /// 更新 API 基地址（用于手机切换 Portal）
   void updateBaseUrl(String newBaseUrl) {
+    // 防御:必须是绝对 URL,否则 native 平台 Dio 会抛异常
+    if (!newBaseUrl.startsWith('http')) return;
     baseUrl = newBaseUrl;
     _dio.options.baseUrl = newBaseUrl;
   }
 
   Future<String?> getPortalUrl() async {
-    if (_portalUrl != null) return _portalUrl;
+    if (_portalUrl != null && _portalUrl!.isNotEmpty) return _portalUrl;
     final prefs = await SharedPreferences.getInstance();
-    _portalUrl = prefs.getString('portal_url');
+    final stored = prefs.getString('portal_url');
+    if (stored == null || stored.isEmpty) return null;
+    _portalUrl = stored;
     return _portalUrl;
   }
 
