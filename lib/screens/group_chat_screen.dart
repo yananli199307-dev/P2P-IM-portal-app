@@ -77,7 +77,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   List<GroupMessage> _messages = [];
   bool _isLoading = true;
   bool _isSendingFile = false;
-  bool _shouldScrollToBottom = true;
   GroupMessage? _replyTarget;
   int _panelOpen = 0;
 
@@ -92,7 +91,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
     
     // 滑到顶部加载更早消息
     if (currentScroll < 50 && !_loadingMore && _messages.isNotEmpty) {
@@ -121,15 +119,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients && _shouldScrollToBottom) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-        }
-      });
-    });
-  }
 
   Future<void> _loadMessages() async {
     // 1. 先读本地缓存
@@ -139,7 +128,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();
         _isLoading = false;
       });
-      _scrollToBottom();
     }
     
     // 2. 后台从服务器同步
@@ -171,7 +159,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       }
       
       setState(() => _isLoading = false);
-      _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -195,7 +182,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       if (mounted) setState(() => _replyTarget = null);
       // 更新消息列表排序
       context.read<ChatProvider>().updateGroupLastMessage(widget.group.id, content);
-      _shouldScrollToBottom = true;
       _loadMessages();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('发送失败: $e')));
@@ -217,7 +203,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           messageType: fileData["file_type"] == 'image' ? 'image' : 'file',
           fileUrl: fileData["file_url"], fileName: file.name, fileSize: fileData["file_size"]);
       }
-      _shouldScrollToBottom = true;
       setState(() => _isSendingFile = false);
       _loadMessages();
     } catch (e) {
@@ -228,10 +213,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   // ===== 消息列表（含日期分割线） =====
 
-  int _getItemCount() {
+  int _getItemCountReversed(List<GroupMessage> msgs) {
     int count = 0;
     String? lastDate;
-    for (final msg in _messages) {
+    for (final msg in msgs) {
       final dateKey = DateFormat('yyyy-MM-dd').format(msg.createdAt);
       if (dateKey != lastDate) { count++; lastDate = dateKey; }
       count++;
@@ -239,16 +224,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return count;
   }
 
-  Widget _buildItem(int displayIndex) {
+  Widget _buildItemReversed(List<GroupMessage> msgs, int displayIndex) {
     int msgIndex = 0;
     String? lastDate;
-    for (int i = 0; i < _messages.length; i++) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(_messages[i].createdAt);
+    for (int i = 0; i < msgs.length; i++) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(msgs[i].createdAt);
       if (dateKey != lastDate) {
-        if (displayIndex == msgIndex) return _buildDateSeparator(_messages[i].createdAt);
+        if (displayIndex == msgIndex) return _buildDateSeparator(msgs[i].createdAt);
         msgIndex++; lastDate = dateKey;
       }
-      if (displayIndex == msgIndex) return _buildMessageBubble(_messages[i]);
+      if (displayIndex == msgIndex) return _buildMessageBubble(msgs[i]);
       msgIndex++;
     }
     return const SizedBox.shrink();
@@ -456,12 +441,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         Expanded(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _getItemCount(),
-                  itemBuilder: (context, index) => _buildItem(index),
-                ),
+              : Builder(builder: (ctx) {
+                  final reversedMsgs = _messages.reversed.toList();
+                  return ListView.builder(
+                    reverse: true,
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _getItemCountReversed(reversedMsgs),
+                    itemBuilder: (context, index) => _buildItemReversed(reversedMsgs, index),
+                  );}),
         ),
         if (_replyTarget != null) _buildReplyBar(),
         if (_isSendingFile) const LinearProgressIndicator(),

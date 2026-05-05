@@ -257,11 +257,12 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
+                    reverse: true,
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      final message = _messages[index];
+                      final message = _messages[_messages.length - 1 - index];
                       final isMe = message.isFromUser;
                       
                       return GestureDetector(
