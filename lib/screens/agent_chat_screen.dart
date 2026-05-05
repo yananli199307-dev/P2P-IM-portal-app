@@ -78,7 +78,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     _loadingMore = true;
     final oldest = _messages.first.createdAt;
     final cached = await LocalDb().getContactMessages(0);
-    final older = cached.where((m) => m.createdAt.isBefore(oldest)).toList();
+    final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
+    final older = cached.where((m) => m.createdAt.isBefore(oldest) && !existingKeys.contains('${m.content}|${m.createdAt.toIso8601String()}')).toList();
     if (older.isNotEmpty && mounted) {
       setState(() {
         _messages.insertAll(0, older.map((m) => AgentMessage(
@@ -121,8 +122,9 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       final messages = await ApiService().getAgentMessages(since: latest?.toIso8601String());
       if (!mounted) return;
       
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMsgs = messages.where((m) => !existingIds.contains(m['id'].toString())).toList();
+      // 用内容+时间去重（本地缓存 ID 与服务器 ID 不一致）
+      final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
+      final newMsgs = messages.where((m) => !existingKeys.contains('${m['content']}|${m['created_at']}')).toList();
       
       if (newMsgs.isNotEmpty) {
         setState(() {
