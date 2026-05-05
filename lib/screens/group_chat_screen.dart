@@ -173,7 +173,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       groupId: widget.group.id,
       content: content,
       senderName: '我',
-      isFromOwner: true,
       createdAt: DateTime.now(),
     );
     setState(() {
