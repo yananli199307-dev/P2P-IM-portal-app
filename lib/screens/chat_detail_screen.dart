@@ -60,7 +60,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
     
     // 滑到顶部时加载更早消息
-    if (currentScroll < 50) {
+    // reverse:true 时，maxScrollExtent 是顶部，pixels 接近即滑到顶
+    if ((maxScroll - currentScroll) < 50) {
       final contact = context.read<ChatProvider>().selectedContact;
       if (contact != null) {
         context.read<ChatProvider>().loadMoreMessages(contact.id);
@@ -150,14 +151,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : messages.isEmpty
                     ? const Center(child: Text('暂无消息\n发送第一条消息吧', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        itemCount: _getItemCount(messages),
-                        itemBuilder: (context, index) {
-                          return _buildItem(messages, index);
-                        },
-                      ),
+                    : Builder(builder: (ctx) {
+                        final reversedMsgs = messages.reversed.toList();
+                        return ListView.builder(
+                          reverse: true,
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          itemCount: _getItemCount(reversedMsgs),
+                          itemBuilder: (context, index) {
+                            return _buildItem(reversedMsgs, index);
+                          },
+                        );
+                      }),
           ),
           // 回复引用栏
           if (_replyTarget != null) _buildReplyBar(),
