@@ -51,6 +51,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     context.read<ChatProvider>().onAgentReply = (content) {
       if (mounted) {
         setState(() {
+        final already = _messages.any((m) => m.content == content);
+        if (already) return;
           _messages.add(AgentMessage(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             content: content,
@@ -78,8 +80,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     _loadingMore = true;
     final oldest = _messages.first.createdAt;
     final cached = await LocalDb().getContactMessages(0);
-    final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
-    final older = cached.where((m) => m.createdAt.isBefore(oldest) && !existingKeys.contains('${m.content}|${m.createdAt.toIso8601String()}')).toList();
+    final now = DateTime.now();
+    final existingContents = _messages
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .map((m) => m.content).toSet();
+    final older = cached.where((m) => m.createdAt.isBefore(oldest) && !existingContents.contains(m.content)).toList();
     if (older.isNotEmpty && mounted) {
       setState(() {
         _messages.insertAll(0, older.map((m) => AgentMessage(
@@ -122,9 +127,12 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       final messages = await ApiService().getAgentMessages(since: latest?.toIso8601String());
       if (!mounted) return;
       
-      // 用内容+时间去重（本地缓存 ID 与服务器 ID 不一致）
-      final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
-      final newMsgs = messages.where((m) => !existingKeys.contains('${m['content']}|${m['created_at']}')).toList();
+      // 用内容去重（同一分钟内相同内容的视为重复）
+      final now = DateTime.now();
+      final existingContents = _messages
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .map((m) => m.content).toSet();
+      final newMsgs = messages.where((m) => !existingContents.contains(m['content'])).toList();
       
       if (newMsgs.isNotEmpty) {
         setState(() {
