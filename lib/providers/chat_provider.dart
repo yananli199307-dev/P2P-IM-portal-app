@@ -199,6 +199,7 @@ class ChatProvider extends ChangeNotifier {
       _error = null;
       // 预加载所有聊天的最近消息到内存
       _preloadAllMessages();
+      _preloadAllGroups();
       await loadUnreadMessages();
     } catch (e) {
       _error = e.toString();
@@ -263,6 +264,39 @@ class ChatProvider extends ChangeNotifier {
     }
     // My Agent 也同步
     _syncFromServer(0);
+  }
+
+  final Map<int, List<Map<String, dynamic>>> _groupCache = {};
+
+  void _preloadAllGroups() async {
+    try {
+      final groups = await _apiService.getGroups();
+      for (final g in groups) {
+        final id = g['id'] as int? ?? 0;
+        if (id > 0) {
+          final cached = await _localDb.getCachedGroupMessages(id);
+          if (cached.isNotEmpty) _groupCache[id] = cached;
+          _syncGroupFromServer(id);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _syncGroupFromServer(int groupId) async {
+    try {
+      final serverMsgs = await _apiService.getGroupMessages(groupId, since: null);
+      final cached = _groupCache[groupId] ?? [];
+      final existingIds = cached.map((m) => m['id']).toSet();
+      final newMsgs = serverMsgs.where((m) => !existingIds.contains(m['id'])).toList();
+      if (newMsgs.isNotEmpty) {
+        _groupCache[groupId] = [...cached, ...newMsgs];
+        _localDb.upsertGroupMessages(newMsgs);
+      } else if (cached.isEmpty) {
+        _groupCache[groupId] = serverMsgs;
+        _localDb.upsertGroupMessages(serverMsgs);
+      }
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<void> _loadLocalThenSync(int contactId) async {
