@@ -598,8 +598,10 @@ class ChatProvider extends ChangeNotifier {
     final sdp = ic['sdp'] as String?;
     final videoFlag = ic['type'] == 'video';
     final fromUserId = ic['from_user_id'] as int?;
+    final fromContactId = ic['from_contact_id'] as int?;
     if (sdp == null) return;
     _webrtc.peerUserId = fromUserId;
+    _webrtc.peerContactId = fromContactId;  // 用对端在我这边的 Contact.id 作为回信令目标
     _webrtc.onSignal = _sendCallSignal;
     await _webrtc.init();
     await _webrtc.acceptCall(sdp, videoFlag);
@@ -609,9 +611,9 @@ class ChatProvider extends ChangeNotifier {
 
   /// 拒绝来电
   void rejectIncomingCall() {
-    final fromUserId = incomingCall?['from_user_id'] as int?;
+    final fromContactId = incomingCall?['from_contact_id'] as int?;
     _wsService.sendMessage('call_reject', {
-      'target_user_id': fromUserId,
+      'target_user_id': fromContactId,
       'data': {},
     });
     incomingCall = null;
@@ -659,9 +661,10 @@ class ChatProvider extends ChangeNotifier {
 
   /// WebRTCService 回调 → 把信令通过 WebSocket 发出去
   void _sendCallSignal(String type, Map<String, dynamic> data) {
-    final target = _webrtc.peerUserId;
+    // 协议:target_user_id 实际是对端 Contact.id(后端按 Contact 表查 portal_url)
+    final target = _webrtc.peerContactId;
     if (target == null) {
-      debugPrint('[Call] _sendCallSignal: no peerUserId');
+      debugPrint('[Call] _sendCallSignal: no peerContactId');
       return;
     }
     _wsService.sendMessage(type, {
