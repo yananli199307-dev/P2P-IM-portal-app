@@ -329,9 +329,9 @@ class ChatProvider extends ChangeNotifier {
       final cached = _msgCache[0];
       final latest = cached != null && cached.isNotEmpty ? cached.first.createdAt : null;
       final serverMsgs = await _apiService.getAgentMessages(since: latest?.toIso8601String());
-      final newMsgs = serverMsgs.where((m) => !cached!.any((c) => c.id.toString() == m['id'].toString())).toList();
+      if (serverMsgs.isEmpty) return;
+      final newMsgs = serverMsgs.where((m) => !(cached ?? []).any((c) => c.id.toString() == m['id'].toString())).toList();
       if (newMsgs.isNotEmpty) {
-        // 存入 _msgCache[0]
         final converted = newMsgs.reversed.map((m) => Message(
           id: int.tryParse(m['id'].toString()) ?? 0,
           contactId: 0,
@@ -341,11 +341,25 @@ class ChatProvider extends ChangeNotifier {
           createdAt: DateTime.tryParse(m['created_at'] ?? '') ?? DateTime.now(),
         )).toList();
         _msgCache[0] = [...converted, ...(cached ?? [])];
-        // 存 LocalDb
         _localDb.upsertMessages(converted);
         notifyListeners();
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadLocalThenSync(int contactId) async {
+    try {
+      final cached = await _localDb.getContactMessages(contactId);
+      if (cached.isNotEmpty && _selectedContact?.id == contactId) {
+        _messages = cached;
+        _msgCache[contactId] = cached;
+        notifyListeners();
+        onScrollToBottom?.call();
+      }
+    } catch (_) {}
+    if (_selectedContact?.id == contactId) {
+      _syncFromServer(contactId);
+    }
   }(int contactId) async {
     try {
       final cached = await _localDb.getContactMessages(contactId);
