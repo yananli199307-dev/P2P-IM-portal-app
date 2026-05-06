@@ -77,6 +77,30 @@ class _ExploreScreenState extends State<ExploreScreen> {
     launchUrl(Uri.parse(url.startsWith('http') ? url : 'https://$url'));
   }
 
+  Future<void> _showSearchDialog() {
+    final ctrl = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('发现 Portal'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '输入 Portal URL'),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('关注')),
+        ],
+      ),
+    );
+    if (result != null && result.trim().isNotEmpty) {
+      _urlController.text = result.trim();
+      _addFollow();
+    }
+  }
+
   Future<void> _addFollow() async {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
@@ -100,30 +124,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('探索'), actions: [
+        IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: '搜索'),
         IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFeed, tooltip: '刷新'),
       ]),
       body: RefreshIndicator(
         onRefresh: () async { await _loadFeed(); await _loadFollows(); },
         child: ListView(children: [
-          // 搜索栏
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Expanded(child: TextField(
-                controller: _urlController,
-                decoration: InputDecoration(
-                  hintText: '输入 Portal URL 关注创作者',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true, fillColor: Colors.grey[100],
-                ),
-                onSubmitted: (_) => _addFollow(),
-              )),
-              const SizedBox(width: 8),
-              IconButton(icon: const Icon(Icons.bookmark_add, color: Colors.orange), onPressed: _addFollow, tooltip: '关注'),
-            ]),
-          ),
-
           // 我的关注
           if (_follows.isNotEmpty) ...[
             Padding(
