@@ -50,24 +50,32 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// 从后端加载最新消息时间（用于列表排序）
-  Future<void> loadLatestMessages() async {
-    try {
-      final latest = await _apiService.getLatestMessages();
-      for (final item in latest) {
-        final time = DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now();
-        final content = item['content'] ?? '';
-        if (item['contact_id'] != null) {
-          _lastMessageTime['contact_${item['contact_id']}'] = time;
-          _lastMessagePreview['contact_${item['contact_id']}'] = content;
-        } else if (item['group_id'] != null) {
-          _lastMessageTime['group_${item['group_id']}'] = time;
-          _lastMessagePreview['group_${item['group_id']}'] = content;
-        }
+  /// 从内存缓存取最新消息预览（不调后端，即时）
+  void loadLatestMessages() {
+    // 私聊 + My Agent
+    for (final c in _contacts) {
+      final msgs = _msgCache[c.id];
+      if (msgs != null && msgs.isNotEmpty) {
+        _lastMessageTime['contact_${c.id}'] = msgs.last.createdAt;
+        _lastMessagePreview['contact_${c.id}'] = msgs.last.content;
       }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('loadLatestMessages: $e');
     }
+    // My Agent
+    final agentMsgs = _msgCache[0];
+    if (agentMsgs != null && agentMsgs.isNotEmpty) {
+      _lastMessageTime['contact_0'] = agentMsgs.last.createdAt;
+      _lastMessagePreview['contact_0'] = agentMsgs.last.content;
+    }
+    // 群聊
+    for (final entry in _groupCache.entries) {
+      final msgs = entry.value;
+      if (msgs.isNotEmpty) {
+        final last = msgs.last;
+        _lastMessageTime['group_${entry.key}'] = DateTime.tryParse(last['created_at'] ?? '') ?? DateTime.now();
+        _lastMessagePreview['group_${entry.key}'] = last['content'] ?? '';
+      }
+    }
+    notifyListeners();
   }
 
   List<Contact> get contacts => _contacts;
