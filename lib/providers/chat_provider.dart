@@ -515,33 +515,37 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(String content, {int? replyToMessageId, String? replyToContent, String? replyToSenderName}) async {
     if (_selectedContact == null) return;
 
-    _isLoading = true;
+    // 先本地显示（和群聊/Agent一致）
+    final tempMsg = Message(
+      id: DateTime.now().millisecondsSinceEpoch,
+      contactId: _selectedContact!.id,
+      content: content,
+      type: MessageType.text,
+      isFromMe: true,
+      createdAt: DateTime.now(),
+      replyToMessageId: replyToMessageId,
+      replyToContent: replyToContent,
+      replyToSenderName: replyToSenderName,
+    );
+    _messages.add(tempMsg);
+    _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
+    _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
     notifyListeners();
 
+    // 后台通过 HTTP API 发送
     try {
-      // 先通过 HTTP API 发送
-      final message = await _apiService.sendMessage(
+      await _apiService.sendMessage(
         _selectedContact!.id,
         content,
         replyToMessageId: replyToMessageId,
         replyToContent: replyToContent,
         replyToSenderName: replyToSenderName,
       );
-      
-      // 添加到本地消息列表
-      _messages.add(message);
-      
-      // 同时通过 WebSocket 发送（用于实时通知）
       _wsService.sendTextMessage(_selectedContact!.id, content);
-      
-      // 更新最后消息时间
-      _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
-      _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
-      
       _error = null;
     } catch (e) {
       _error = e.toString();
-    } finally {
+    }
       _isLoading = false;
       notifyListeners();
     }
