@@ -45,10 +45,8 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final chatProvider = context.read<ChatProvider>();
       // 先并行加载联系人和最新消息时间
-      await Future.wait<void>([
-        chatProvider.loadContacts(),
-        chatProvider.loadLatestMessages(),
-      ]);
+      await chatProvider.loadContacts();
+      chatProvider.loadLatestMessages();
       // 再加载群组
       final groupsData = await ApiService().getGroups();
       if (!mounted) return;
