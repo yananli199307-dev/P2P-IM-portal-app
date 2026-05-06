@@ -395,9 +395,9 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       
-      // 增量合并：只追加本地没有的新消息
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMsgs = serverMsgs.where((m) => !existingIds.contains(m.id)).toList();
+      // 增量合并：用内容+时间去重（避免发送消息的时间戳临时ID与服务器DB ID不匹配）
+      final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
+      final newMsgs = serverMsgs.where((m) => !existingKeys.contains('${m.content}|${m.createdAt.toIso8601String()}')).toList();
       
       if (newMsgs.isNotEmpty) {
         _messages.addAll(newMsgs);
@@ -495,8 +495,8 @@ class ChatProvider extends ChangeNotifier {
       messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       if (_selectedContact?.id != contactId) return;
       
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMsgs = messages.where((m) => !existingIds.contains(m.id)).toList();
+      final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
+      final newMsgs = messages.where((m) => !existingKeys.contains('${m.content}|${m.createdAt.toIso8601String()}')).toList();
       if (newMsgs.isNotEmpty) {
         _messages.addAll(newMsgs);
         _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
