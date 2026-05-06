@@ -20,6 +20,13 @@ class ApiService {
   String? _token;
   String? _portalUrl;
 
+  String _normalizePortalUrl(String url) {
+    final cleaned = url.trim().replaceAll(RegExp(r'\s+'), '');
+    if (cleaned.isEmpty) return '';
+    final normalized = cleaned.startsWith('http') ? cleaned : 'https://$cleaned';
+    return normalized.replaceFirst(RegExp(r'/+$'), '');
+  }
+
   void initialize() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
@@ -46,9 +53,8 @@ class ApiService {
 
   // 设置 Portal URL
   Future<void> setPortalUrl(String url) async {
-    final cleaned = url.trim().replaceAll(RegExp(r'\s+'), '');
-    if (cleaned.isEmpty) return; // 防御:空字符串不要污染 baseUrl
-    final normalized = cleaned.startsWith('http') ? cleaned : 'https://$cleaned';
+    final normalized = _normalizePortalUrl(url);
+    if (normalized.isEmpty) return; // 防御:空字符串不要污染 baseUrl
     _portalUrl = normalized;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('portal_url', normalized);
@@ -114,11 +120,12 @@ class ApiService {
   Future<String> login(String portalUrl, String password) async {
     // 先设置 Portal URL
     await setPortalUrl(portalUrl);
+    final normalized = _normalizePortalUrl(portalUrl);
     // 更新 Dio baseUrl 为目标 Portal（非 Web 平台必需绝对 URL）
-    updateBaseUrl('$portalUrl/api');
+    updateBaseUrl('$normalized/api');
     
     final response = await _dio.post('/auth/login', data: {
-      'portal_url': portalUrl,
+      'portal_url': normalized,
       'password': password,
     });
     final token = response.data['access_token'];
@@ -150,8 +157,7 @@ class ApiService {
 
   /// 发送添加联系人申请（和 Web 前端一致，等对方同意后才创建）
   Future<void> addContact(String name, String portalUrl) async {
-    final cleaned = portalUrl.trim().replaceAll(RegExp(r'\s+'), '');
-    final normalizedUrl = cleaned.startsWith('http') ? cleaned : 'https://$cleaned';
+    final normalizedUrl = _normalizePortalUrl(portalUrl);
     final sharedKey = 'sk_${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}${List.generate(8, (_) => (Random().nextDouble() * 36).toInt().toRadixString(36)).join()}';
     await _dio.post('/contact-requests/apply', data: {
       'target_portal': normalizedUrl,
@@ -178,6 +184,8 @@ class ApiService {
     required String requesterPortal,
     String? message,
   }) async {
+    final normalizedTargetPortal = _normalizePortalUrl(targetPortal);
+    final normalizedRequesterPortal = _normalizePortalUrl(requesterPortal);
     // 生成 shared_key
     final sharedKey = generateSharedKey();
     
@@ -185,17 +193,17 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final pendingRequests = jsonDecode(prefs.getString('pending_requests') ?? '[]') as List;
     pendingRequests.add({
-      'target_portal': targetPortal,
-      'requester_portal': requesterPortal,
+      'target_portal': normalizedTargetPortal,
+      'requester_portal': normalizedRequesterPortal,
       'shared_key': sharedKey,
       'created_at': DateTime.now().toIso8601String(),
     });
     await prefs.setString('pending_requests', jsonEncode(pendingRequests));
     
     final response = await _dio.post('/contact-requests/apply', data: {
-      'target_portal': targetPortal,
+      'target_portal': normalizedTargetPortal,
       'requester_name': requesterName,
-      'requester_portal': requesterPortal,
+      'requester_portal': normalizedRequesterPortal,
       'shared_key': sharedKey,
       'message': message,
     });
