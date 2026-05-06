@@ -77,7 +77,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     launchUrl(Uri.parse(url.startsWith('http') ? url : 'https://$url'));
   }
 
-  Future<void> _showSearchDialog() {
+  Future<void> _showSearchDialog() async {
     final ctrl = TextEditingController();
     final result = await showDialog<String>(
       context: context,
