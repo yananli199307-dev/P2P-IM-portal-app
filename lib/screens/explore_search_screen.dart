@@ -91,16 +91,11 @@ class _ExploreSearchScreenState extends State<ExploreSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6C63FF),
-        foregroundColor: Colors.white,
         title: TextField(
           controller: _controller,
           autofocus: true,
-          cursorColor: Colors.white,
-          style: const TextStyle(color: Colors.white, fontSize: 16),
           decoration: const InputDecoration(
             hintText: '输入域名，如 agentp2p.cn',
-            hintStyle: TextStyle(color: Colors.white60),
             border: InputBorder.none,
           ),
           onSubmitted: (_) => _search(),
