@@ -51,6 +51,8 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     context.read<ChatProvider>().onAgentReply = (content) {
       if (mounted) {
         setState(() {
+        final already = _messages.any((m) => m.content == content);
+        if (already) return;
           _messages.add(AgentMessage(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             content: content,
@@ -58,7 +60,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             createdAt: DateTime.now(),
           ));
         });
-        _scrollToBottom();
+  
       }
     };
     
@@ -78,7 +80,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     _loadingMore = true;
     final oldest = _messages.first.createdAt;
     final cached = await LocalDb().getContactMessages(0);
-    final older = cached.where((m) => m.createdAt.isBefore(oldest)).toList();
+    final now = DateTime.now();
+    final existingContents = _messages
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .map((m) => m.content).toSet();
+    final older = cached.where((m) => m.createdAt.isBefore(oldest) && !existingContents.contains(m.content)).toList();
     if (older.isNotEmpty && mounted) {
       setState(() {
         _messages.insertAll(0, older.map((m) => AgentMessage(
@@ -95,7 +101,21 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
   }
 
   Future<void> _loadHistory() async {
-    // 1. 先读本地缓存
+    // 1. 先查内存缓存（私聊级别速度）
+    final cached0 = context.read<ChatProvider>().msgCache[0];
+    if (cached0 != null && cached0.isNotEmpty && mounted) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(cached0.map((m) => AgentMessage(
+          id: m.id.toString(), content: m.content,
+          isFromUser: m.isFromMe, createdAt: m.createdAt,
+          fileUrl: m.fileUrl, fileName: m.fileName,
+        )));
+        _isLoading = false;
+      });
+      return;
+    }
+    // 2. 内存无 → 读 LocalDb
     final cached = await LocalDb().getContactMessages(0);
     if (cached.isNotEmpty && mounted) {
       setState(() {
@@ -110,31 +130,11 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
         )));
         _isLoading = false;
       });
-      _scrollToBottom();
-    } else {
-      setState(() => _isLoading = true);  // 无本地缓存，显示加载圈
-    }
-    
-    // 2. 后台同步服务器
-    try {
-      final messages = await ApiService().getAgentMessages();
-      if (!mounted) return;
-      
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMsgs = messages.where((m) => !existingIds.contains(m['id'].toString())).toList();
-      
-      if (newMsgs.isNotEmpty) {
-        setState(() {
-          _messages.addAll(newMsgs.reversed.map((m) => AgentMessage(
-            id: m['id'].toString(),
-            content: m['content'],
-            isFromUser: m['is_from_owner'] ?? true,
-            createdAt: DateTime.parse(m['created_at']),
-            fileUrl: m['file_url'],
-            fileName: m['file_name'],
-          )));
-        });
-      } else if (cached.isEmpty) {
+    } else if (mounted) {
+      setState(() => _isLoading = true);
+      try {
+        final messages = await ApiService().getAgentMessages();
+        if (!mounted) return;
         setState(() {
           _messages.addAll(messages.reversed.map((m) => AgentMessage(
             id: m['id'].toString(),
@@ -144,24 +144,12 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             fileUrl: m['file_url'],
             fileName: m['file_name'],
           )));
+          _isLoading = false;
         });
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
       }
-      
-      setState(() => _isLoading = false);
-      _scrollToBottom();
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-        }
-      });
-    });
   }
 
   Future<void> _sendMessage() async {
@@ -181,17 +169,20 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       ));
       _isSending = true;
     });
-    _scrollToBottom();
     
-    // 写入本地缓存，下次打开秒出
-    LocalDb().upsertMessage(Message(
+    // 写入本地缓存 + 内存缓存
+    final cachedMsg = Message(
       id: msgId,
       contactId: 0,
       content: content,
       type: MessageType.text,
       isFromMe: true,
       createdAt: msgTime,
-    ));
+    );
+    LocalDb().upsertMessage(cachedMsg);
+    final cp = context.read<ChatProvider>();
+    cp.msgCache.putIfAbsent(0, () => []);
+    cp.msgCache[0]!.add(cachedMsg);
 
     try {
       await ApiService().sendAgentMessage(content);
@@ -256,11 +247,12 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
+                    reverse: true,
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      final message = _messages[index];
+                      final message = _messages[_messages.length - 1 - index];
                       final isMe = message.isFromUser;
                       
                       return GestureDetector(
@@ -303,7 +295,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                   ),
           ),
           if (_isSending)
-            const LinearProgressIndicator(),
+            const SizedBox.shrink(),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(

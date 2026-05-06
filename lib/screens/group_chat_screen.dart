@@ -77,7 +77,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   List<GroupMessage> _messages = [];
   bool _isLoading = true;
   bool _isSendingFile = false;
-  bool _shouldScrollToBottom = true;
   GroupMessage? _replyTarget;
   int _panelOpen = 0;
 
@@ -92,7 +91,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
     
     // 滑到顶部加载更早消息
     if (currentScroll < 50 && !_loadingMore && _messages.isNotEmpty) {
@@ -121,58 +119,45 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients && _shouldScrollToBottom) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-        }
-      });
-    });
-  }
 
   Future<void> _loadMessages() async {
-    // 1. 先读本地缓存
+    // 1. 先查内存缓存
+    final cached0 = context.read<ChatProvider>().groupCache[widget.group.id];
+    if (cached0 != null && cached0.isNotEmpty && mounted) {
+      setState(() {
+        _messages = cached0.map((m) => GroupMessage.fromJson(m)).toList();
+        _isLoading = false;
+      });
+      return;
+    }
+    // 2. 内存无 → 读 LocalDb
     final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
     if (cached.isNotEmpty && mounted) {
       setState(() {
         _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();
         _isLoading = false;
       });
-      _scrollToBottom();
-    }
-    
-    // 2. 后台从服务器同步
-    try {
-      List<Map<String, dynamic>> messagesData;
-      if (widget.group.isOwner) {
-        messagesData = await ApiService().getGroupMessages(widget.group.id);
-      } else {
-        messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!);
-        // 非群主：用本地 ID 覆盖消息的 group_id，保证缓存可命中
-        for (final m in messagesData) { m['group_id'] = widget.group.id; }
-      }
-      if (!mounted) return;
-      
-      // 增量合并
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final newMsgs = messagesData.where((m) => !existingIds.contains(m['id'])).toList();
-      
-      if (newMsgs.isNotEmpty) {
-        final newGroupMsgs = newMsgs.reversed.map((m) => GroupMessage.fromJson(m)).toList();
-        _messages.addAll(newGroupMsgs);
-        _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        LocalDb().upsertGroupMessages(newMsgs);
-      } else if (_messages.isEmpty) {
-        _messages = messagesData.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+    } else if (mounted) {
+      setState(() => _isLoading = true);
+      try {
+        List<Map<String, dynamic>> messagesData;
+        if (widget.group.isOwner) {
+          messagesData = await ApiService().getGroupMessages(widget.group.id);
+        } else {
+          messagesData = await ApiService().getGroupMessagesByUuid(widget.group.groupUuid!);
+          for (final m in messagesData) { m['group_id'] = widget.group.id; }
+        }
+        if (!mounted) return;
+        setState(() {
+          _messages = messagesData.reversed.map((m) => GroupMessage.fromJson(m)).toList();
+          _isLoading = false;
+        });
         LocalDb().upsertGroupMessages(messagesData);
+        
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
       }
-      
-      setState(() => _isLoading = false);
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
     }
   }
 
@@ -181,6 +166,20 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (content.isEmpty) return;
     final reply = _replyTarget;
     _messageController.clear();
+    
+    // 先本地显示
+    final tempMsg = GroupMessage(
+      id: DateTime.now().millisecondsSinceEpoch,
+      content: content,
+      senderName: '我',
+      isFromOwner: true,
+      createdAt: DateTime.now(),
+    );
+    setState(() {
+      _messages.add(tempMsg);
+      _replyTarget = null;
+    });
+    
     try {
       await ApiService().sendGroupMessage(
         widget.group.id, content,
@@ -190,11 +189,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         replyToContent: reply != null ? (reply.content.length > 50 ? '${reply.content.substring(0, 50)}...' : reply.content) : null,
         replyToSenderName: reply?.isFromOwner == true ? '群主' : (reply?.senderName ?? '成员'),
       );
-      if (mounted) setState(() => _replyTarget = null);
-      // 更新消息列表排序
       context.read<ChatProvider>().updateGroupLastMessage(widget.group.id, content);
-      _shouldScrollToBottom = true;
-      _loadMessages();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('发送失败: $e')));
     }
@@ -215,7 +210,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           messageType: fileData["file_type"] == 'image' ? 'image' : 'file',
           fileUrl: fileData["file_url"], fileName: file.name, fileSize: fileData["file_size"]);
       }
-      _shouldScrollToBottom = true;
       setState(() => _isSendingFile = false);
       _loadMessages();
     } catch (e) {
@@ -226,10 +220,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   // ===== 消息列表（含日期分割线） =====
 
-  int _getItemCount() {
+  int _getItemCountReversed(List<GroupMessage> msgs) {
     int count = 0;
     String? lastDate;
-    for (final msg in _messages) {
+    for (final msg in msgs) {
       final dateKey = DateFormat('yyyy-MM-dd').format(msg.createdAt);
       if (dateKey != lastDate) { count++; lastDate = dateKey; }
       count++;
@@ -237,16 +231,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return count;
   }
 
-  Widget _buildItem(int displayIndex) {
+  Widget _buildItemReversed(List<GroupMessage> msgs, int displayIndex) {
     int msgIndex = 0;
     String? lastDate;
-    for (int i = 0; i < _messages.length; i++) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(_messages[i].createdAt);
+    for (int i = 0; i < msgs.length; i++) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(msgs[i].createdAt);
       if (dateKey != lastDate) {
-        if (displayIndex == msgIndex) return _buildDateSeparator(_messages[i].createdAt);
+        if (displayIndex == msgIndex) return _buildDateSeparator(msgs[i].createdAt);
         msgIndex++; lastDate = dateKey;
       }
-      if (displayIndex == msgIndex) return _buildMessageBubble(_messages[i]);
+      if (displayIndex == msgIndex) return _buildMessageBubble(msgs[i]);
       msgIndex++;
     }
     return const SizedBox.shrink();
@@ -454,12 +448,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         Expanded(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _getItemCount(),
-                  itemBuilder: (context, index) => _buildItem(index),
-                ),
+              : Builder(builder: (ctx) {
+                  final reversedMsgs = _messages.reversed.toList();
+                  return ListView.builder(
+                    reverse: true,
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _getItemCountReversed(reversedMsgs),
+                    itemBuilder: (context, index) => _buildItemReversed(reversedMsgs, index),
+                  );}),
         ),
         if (_replyTarget != null) _buildReplyBar(),
         if (_isSendingFile) const LinearProgressIndicator(),

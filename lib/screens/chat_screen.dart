@@ -45,10 +45,8 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final chatProvider = context.read<ChatProvider>();
       // 先并行加载联系人和最新消息时间
-      await Future.wait([
-        chatProvider.loadContacts(),
-        chatProvider.loadLatestMessages(),
-      ]);
+      await chatProvider.loadContacts();
+      chatProvider.loadLatestMessages();
       // 再加载群组
       final groupsData = await ApiService().getGroups();
       if (!mounted) return;
@@ -87,19 +85,23 @@ class _ChatScreenState extends State<ChatScreen> {
 
     for (final contact in provider.contacts) {
       final key = 'contact_${contact.id}';
+      final time = lastMsg[key];
+      if (time == null) continue;  // 无消息不显示
       items.add(_ChatItem(
         contact: contact,
-        time: lastMsg[key] ?? DateTime.fromMillisecondsSinceEpoch(0),
-        preview: lastPreview[key] ?? '点击开始聊天',
+        time: time,
+        preview: lastPreview[key] ?? '',
       ));
     }
 
     for (final group in _groups) {
       final key = 'group_${group.id}';
+      final time = lastMsg[key];
+      if (time == null) continue;  // 无消息不显示
       items.add(_ChatItem(
         group: group,
-        time: lastMsg[key] ?? group.createdAt,
-        preview: lastPreview[key] ?? '群聊',
+        time: time,
+        preview: lastPreview[key] ?? '',
       ));
     }
 
@@ -141,9 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ? const Center(child: CircularProgressIndicator())
           : chatProvider.contacts.isEmpty && _groups.isEmpty
               ? const Center(child: Text('暂无消息\n去通讯录添加联系人吧', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: Consumer<ChatProvider>(
+              : Consumer<ChatProvider>(
                     builder: (_, provider, __) {
                       final items = _buildChatList(provider);
                       return ListView.builder(
@@ -199,7 +199,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       );
                     },
                   ),
-                ),
     );
   }
 }

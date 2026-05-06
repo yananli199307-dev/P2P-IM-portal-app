@@ -23,7 +23,6 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
-  bool _shouldScrollToBottom = true;
   Message? _replyTarget;
   bool _multiSelect = false;
   final Set<int> _selectedIds = {};
@@ -46,21 +45,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    
-    // 消息已预加载在内存，直接滚底
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-    });
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    _shouldScrollToBottom = (maxScroll - currentScroll) < 50;
     
     // 滑到顶部时加载更早消息
-    if (currentScroll < 50) {
+    // reverse:true 时，maxScrollExtent 是顶部，pixels 接近即滑到顶
+    if ((maxScroll - currentScroll) < 50) {
       final contact = context.read<ChatProvider>().selectedContact;
       if (contact != null) {
         context.read<ChatProvider>().loadMoreMessages(contact.id);
@@ -75,13 +69,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && _shouldScrollToBottom) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent * 2);
-      }
-    });
-  }
 
   void _sendMessage() {
     final content = _messageController.text.trim();
@@ -100,8 +87,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       context.read<ChatProvider>().sendMessage(content);
     }
     _messageController.clear();
-    _shouldScrollToBottom = true;
-    _scrollToBottom();
   }
 
   Future<void> _sendFile() async {
@@ -117,8 +102,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         // Web 端：用 bytes 上传
         await context.read<ChatProvider>().sendFileBytes(file.name, file.bytes!);
       }
-      _shouldScrollToBottom = true;
-      _scrollToBottom();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('发送文件失败: $e')));
     }
@@ -150,14 +133,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : messages.isEmpty
                     ? const Center(child: Text('暂无消息\n发送第一条消息吧', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        itemCount: _getItemCount(messages),
-                        itemBuilder: (context, index) {
-                          return _buildItem(messages, index);
-                        },
-                      ),
+                    : Builder(builder: (ctx) {
+                        final reversedMsgs = messages.reversed.toList();
+                        return ListView.builder(
+                          reverse: true,
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          itemCount: _getItemCount(reversedMsgs),
+                          itemBuilder: (context, index) {
+                            return _buildItem(reversedMsgs, index);
+                          },
+                        );
+                      }),
           ),
           // 回复引用栏
           if (_replyTarget != null) _buildReplyBar(),

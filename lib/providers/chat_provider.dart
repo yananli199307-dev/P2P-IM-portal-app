@@ -19,6 +19,10 @@ class ChatProvider extends ChangeNotifier {
   void Function(String content)? onAgentReply;  // Screen 设置，消息加载完成后调用
   void Function(Map<String, dynamic> data)? onContactRequestReceived; // 收到新加好友申请的回调
   final Map<int, List<Message>> _msgCache = {};  // contactId → 最近消息窗口
+  final Map<int, List<Map<String, dynamic>>> _groupCache = {};
+
+  Map<int, List<Message>> get msgCache => _msgCache;
+  Map<int, List<Map<String, dynamic>>> get groupCache => _groupCache;
   bool _isLoading = false;
   String? _error;
   Map<String, dynamic>? incomingCall;
@@ -49,24 +53,32 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// 从后端加载最新消息时间（用于列表排序）
-  Future<void> loadLatestMessages() async {
-    try {
-      final latest = await _apiService.getLatestMessages();
-      for (final item in latest) {
-        final time = DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now();
-        final content = item['content'] ?? '';
-        if (item['contact_id'] != null) {
-          _lastMessageTime['contact_${item['contact_id']}'] = time;
-          _lastMessagePreview['contact_${item['contact_id']}'] = content;
-        } else if (item['group_id'] != null) {
-          _lastMessageTime['group_${item['group_id']}'] = time;
-          _lastMessagePreview['group_${item['group_id']}'] = content;
-        }
+  /// 从内存缓存取最新消息预览（不调后端，即时）
+  void loadLatestMessages() {
+    // 私聊 + My Agent
+    for (final c in _contacts) {
+      final msgs = _msgCache[c.id];
+      if (msgs != null && msgs.isNotEmpty) {
+        _lastMessageTime['contact_${c.id}'] = msgs.last.createdAt;
+        _lastMessagePreview['contact_${c.id}'] = msgs.last.content;
       }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('loadLatestMessages: $e');
     }
+    // My Agent
+    final agentMsgs = _msgCache[0];
+    if (agentMsgs != null && agentMsgs.isNotEmpty) {
+      _lastMessageTime['contact_0'] = agentMsgs.last.createdAt;
+      _lastMessagePreview['contact_0'] = agentMsgs.last.content;
+    }
+    // 群聊
+    for (final entry in _groupCache.entries) {
+      final msgs = entry.value;
+      if (msgs.isNotEmpty) {
+        final last = msgs.last;
+        _lastMessageTime['group_${entry.key}'] = DateTime.tryParse(last['created_at'] ?? '') ?? DateTime.now();
+        _lastMessagePreview['group_${entry.key}'] = last['content'] ?? '';
+      }
+    }
+    notifyListeners();
   }
 
   List<Contact> get contacts => _contacts;
@@ -166,14 +178,17 @@ class ChatProvider extends ChangeNotifier {
       case 'agent_reply':
         final content = data?['content'] ?? message['content'] ?? '';
         if (content.isNotEmpty) {
-          _localDb.upsertMessage(Message(
+          final msg = Message(
             id: DateTime.now().millisecondsSinceEpoch,
             contactId: 0,
             content: content,
             type: MessageType.text,
             isFromMe: false,
             createdAt: DateTime.now(),
-          ));
+          );
+          _localDb.upsertMessage(msg);
+          _msgCache.putIfAbsent(0, () => []);
+          _msgCache[0]!.add(msg);
           onAgentReply?.call(content);
         }
         break;
@@ -198,8 +213,10 @@ class ChatProvider extends ChangeNotifier {
       // 写入本地缓存
       _localDb.upsertMessage(newMessage);
       
-      // 更新最后消息时间
+      // 更新内存缓存（未选中时也缓存，下次秒开）
       if (newMessage.contactId != null) {
+        _msgCache.putIfAbsent(newMessage.contactId!, () => []);
+        _msgCache[newMessage.contactId!]!.add(newMessage);
         _lastMessageTime['contact_${newMessage.contactId}'] = newMessage.createdAt;
         _lastMessagePreview['contact_${newMessage.contactId}'] = newMessage.content;
         notifyListeners();
@@ -234,6 +251,7 @@ class ChatProvider extends ChangeNotifier {
       _error = null;
       // 预加载所有聊天的最近消息到内存
       _preloadAllMessages();
+      _preloadAllGroups();
       await loadUnreadMessages();
     } catch (e) {
       _error = e.toString();
@@ -283,18 +301,99 @@ class ChatProvider extends ChangeNotifier {
     await _loadLocalThenSync(contactId);
   }
 
-  /// 预加载所有联系人 + My Agent 的最近消息到内存缓存
+  /// 预加载所有聊天的最近消息到内存，并后台从服务器同步离线消息
   void _preloadAllMessages() {
-    // My Agent (contact_id=0)
+    // 1. 本地缓存先放进内存
     _localDb.getContactMessages(0).then((msgs) {
       if (msgs.isNotEmpty) _msgCache[0] = msgs;
+      _syncAgentFromServer();
     });
-    // 所有联系人
     for (final c in _contacts) {
       _localDb.getContactMessages(c.id).then((msgs) {
         if (msgs.isNotEmpty) _msgCache[c.id] = msgs;
+        _syncFromServer(c.id);
       });
     }
+  }
+
+
+  void _preloadAllGroups() async {
+    try {
+      final groups = await _apiService.getGroups();
+      for (final g in groups) {
+        final id = g['id'] as int? ?? 0;
+        final isOwner = g['is_owner'] == true;
+        final uuid = g['group_uuid'] as String? ?? g['group_id'] as String?;
+        if (id > 0) {
+          final cached = await _localDb.getCachedGroupMessages(id);
+          if (cached.isNotEmpty) _groupCache[id] = cached;
+          if (isOwner) {
+            _syncGroupFromServer(id);
+          } else if (uuid != null) {
+            _syncNonOwnerGroup(uuid, id);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _syncNonOwnerGroup(String uuid, int localId) async {
+    try {
+      final serverMsgs = await _apiService.getGroupMessagesByUuid(uuid);
+      // 覆盖为本地 ID 保证缓存一致
+      for (final m in serverMsgs) { m['group_id'] = localId; }
+      final cached = _groupCache[localId] ?? [];
+      final existingIds = cached.map((m) => m['id']).toSet();
+      final newMsgs = serverMsgs.where((m) => !existingIds.contains(m['id'])).toList();
+      if (newMsgs.isNotEmpty) {
+        _groupCache[localId] = [...cached, ...newMsgs];
+        _localDb.upsertGroupMessages(newMsgs);
+      } else if (cached.isEmpty) {
+        _groupCache[localId] = serverMsgs;
+        _localDb.upsertGroupMessages(serverMsgs);
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _syncGroupFromServer(int groupId) async {
+    try {
+      final serverMsgs = await _apiService.getGroupMessages(groupId, since: null);
+      final cached = _groupCache[groupId] ?? [];
+      final existingIds = cached.map((m) => m['id']).toSet();
+      final newMsgs = serverMsgs.where((m) => !existingIds.contains(m['id'])).toList();
+      if (newMsgs.isNotEmpty) {
+        _groupCache[groupId] = [...cached, ...newMsgs];
+        _localDb.upsertGroupMessages(newMsgs);
+      } else if (cached.isEmpty) {
+        _groupCache[groupId] = serverMsgs;
+        _localDb.upsertGroupMessages(serverMsgs);
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _syncAgentFromServer() async {
+    try {
+      final cached = _msgCache[0];
+      final latest = cached != null && cached.isNotEmpty ? cached.last.createdAt : null;
+      final serverMsgs = await _apiService.getAgentMessages(since: latest?.toIso8601String());
+      if (serverMsgs.isEmpty) return;
+      final newMsgs = serverMsgs.where((m) => !(cached ?? []).any((c) => c.id.toString() == m['id'].toString())).toList();
+      if (newMsgs.isNotEmpty) {
+        final converted = newMsgs.reversed.map((m) => Message(
+          id: int.tryParse(m['id'].toString()) ?? 0,
+          contactId: 0,
+          content: m['content'] ?? '',
+          type: MessageType.text,
+          isFromMe: m['is_from_owner'] == true,
+          createdAt: DateTime.tryParse(m['created_at'] ?? '') ?? DateTime.now(),
+        )).toList();
+        _msgCache[0] = [...converted, ...(cached ?? [])];
+        _localDb.upsertMessages(converted);
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadLocalThenSync(int contactId) async {
@@ -304,7 +403,7 @@ class ChatProvider extends ChangeNotifier {
         _messages = cached;
         _msgCache[contactId] = cached;
         notifyListeners();
-        onScrollToBottom?.call();  // 缓存加载完成→滚底
+        onScrollToBottom?.call();
       }
     } catch (_) {}
     if (_selectedContact?.id == contactId) {
@@ -315,10 +414,23 @@ class ChatProvider extends ChangeNotifier {
   /// 从服务器增量同步，不覆盖已有消息
   Future<void> _syncFromServer(int contactId) async {
     try {
-      final serverMsgs = await _apiService.getMessages(contactId);
+      // 计算本地最新消息时间，传给服务器做增量同步
+      final cached = _msgCache[contactId];
+      final latest = cached != null && cached.isNotEmpty ? cached.last.createdAt : null;
+      final serverMsgs = await _apiService.getMessages(contactId,
+        since: latest?.toIso8601String(),
+      );
       serverMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       
-      if (_selectedContact?.id != contactId) return;  // 已切走
+      // 没有人看这个聊天→更新缓存和DB后返回
+      if (_selectedContact?.id != contactId) {
+        if (serverMsgs.isNotEmpty) {
+          _msgCache[contactId] = serverMsgs;
+          _localDb.upsertMessages(serverMsgs);
+          notifyListeners();
+        }
+        return;
+      }
       
       // 增量合并：只追加本地没有的新消息
       final existingIds = _messages.map((m) => m.id).toSet();
@@ -440,35 +552,36 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(String content, {int? replyToMessageId, String? replyToContent, String? replyToSenderName}) async {
     if (_selectedContact == null) return;
 
-    _isLoading = true;
+    // 先本地显示（和群聊/Agent一致）
+    final tempMsg = Message(
+      id: DateTime.now().millisecondsSinceEpoch,
+      contactId: _selectedContact!.id,
+      content: content,
+      type: MessageType.text,
+      isFromMe: true,
+      createdAt: DateTime.now(),
+      replyToMessageId: replyToMessageId,
+      replyToContent: replyToContent,
+      replyToSenderName: replyToSenderName,
+    );
+    _messages.add(tempMsg);
+    _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
+    _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
     notifyListeners();
 
+    // 后台通过 HTTP API 发送
     try {
-      // 先通过 HTTP API 发送
-      final message = await _apiService.sendMessage(
+      await _apiService.sendMessage(
         _selectedContact!.id,
         content,
         replyToMessageId: replyToMessageId,
         replyToContent: replyToContent,
         replyToSenderName: replyToSenderName,
       );
-      
-      // 添加到本地消息列表
-      _messages.add(message);
-      
-      // 同时通过 WebSocket 发送（用于实时通知）
       _wsService.sendTextMessage(_selectedContact!.id, content);
-      
-      // 更新最后消息时间
-      _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
-      _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
-      
       _error = null;
     } catch (e) {
       _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
   }
 
