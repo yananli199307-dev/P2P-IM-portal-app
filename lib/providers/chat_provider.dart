@@ -546,9 +546,6 @@ class ChatProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
     }
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   /// 断开 WebSocket
