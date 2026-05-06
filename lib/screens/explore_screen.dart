@@ -82,22 +82,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('发现 Portal'),
+        title: const Text('发现创作者'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(hintText: '输入 Portal URL'),
+          decoration: const InputDecoration(hintText: '输入域名，如 agentp2p.cn'),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('关注')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('打开')),
         ],
       ),
     );
     if (result != null && result.trim().isNotEmpty) {
-      _urlController.text = result.trim();
-      _addFollow();
+      var url = result.trim();
+      if (!url.startsWith('http')) url = 'https://$url';
+      _urlController.text = url;
+      await _addFollow();
+      // 打开创作者主页
+      launchUrl(Uri.parse('$url/content/'));
     }
   }
 
