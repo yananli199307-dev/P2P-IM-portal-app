@@ -385,7 +385,15 @@ class ChatProvider extends ChangeNotifier {
       );
       serverMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       
-      if (_selectedContact?.id != contactId) return;  // 已切走
+      // 没有人看这个聊天→更新缓存和DB后返回
+      if (_selectedContact?.id != contactId) {
+        if (serverMsgs.isNotEmpty) {
+          _msgCache[contactId] = serverMsgs;
+          _localDb.upsertMessages(serverMsgs);
+          notifyListeners();
+        }
+        return;
+      }
       
       // 增量合并：只追加本地没有的新消息
       final existingIds = _messages.map((m) => m.id).toSet();
