@@ -80,6 +80,7 @@ class WebSocketService {
       }
       
       onConnect?.call();
+      _flushPending();
       
       // 监听消息
       _socket!.listen(
@@ -154,24 +155,42 @@ class WebSocketService {
     _reconnectTimer = Timer(reconnectDelay, _connect);
   }
 
+  /// 等待发送的消息队列(连接断开时缓存,重连后立即发出)
+  final List<String> _pendingMessages = [];
+
   /// 发送消息
   void sendMessage(String type, Map<String, dynamic> data) {
-    if (_socket == null || _socket!.readyState != WebSocket.open) {
-      if (kDebugMode) {
-        print('[WebSocket] Cannot send, not connected');
-      }
-      return;
-    }
-    
     final message = jsonEncode({
       'type': type,
       'data': data,
     });
-    
+
+    if (_socket == null || _socket!.readyState != WebSocket.open) {
+      // 连接断开:队列缓存,重连后由 _flushPending 发出。call_invite 等关键信令必须不丢
+      _pendingMessages.add(message);
+      if (kDebugMode) {
+        print('[WebSocket] Queued ($type), socket not open. Queue size: ${_pendingMessages.length}');
+      }
+      return;
+    }
+
     _socket!.add(message);
-    
+
     if (kDebugMode) {
       print('[WebSocket] Sent: $message');
+    }
+  }
+
+  void _flushPending() {
+    if (_pendingMessages.isEmpty) return;
+    if (_socket == null || _socket!.readyState != WebSocket.open) return;
+    final toSend = List<String>.from(_pendingMessages);
+    _pendingMessages.clear();
+    for (final m in toSend) {
+      _socket!.add(m);
+    }
+    if (kDebugMode) {
+      print('[WebSocket] Flushed ${toSend.length} queued messages');
     }
   }
 
