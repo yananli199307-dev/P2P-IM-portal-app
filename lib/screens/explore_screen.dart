@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
+import 'explore_search_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -11,7 +12,6 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  final _urlController = TextEditingController();
   List<Map<String, dynamic>> _follows = [];
   List<_ContentCard> _feed = [];
   bool _loadingFollows = false;
@@ -71,54 +71,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
-  void _openUrl() {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) return;
-    launchUrl(Uri.parse(url.startsWith('http') ? url : 'https://$url'));
-  }
 
-  Future<void> _showSearchDialog() async {
-    final ctrl = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('发现创作者'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '输入域名，如 agentp2p.cn'),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('打开')),
-        ],
-      ),
-    );
-    if (result != null && result.trim().isNotEmpty) {
-      var url = result.trim();
-      if (!url.startsWith('http')) url = 'https://$url';
-      _urlController.text = url;
-      await _addFollow();
-      // 打开创作者主页
-      launchUrl(Uri.parse('$url/content/'));
-    }
-  }
 
-  Future<void> _addFollow() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) return;
-    final fullUrl = url.startsWith('http') ? url : 'https://$url';
-    try {
-      await ApiService().addFollow(fullUrl);
-      _urlController.clear();
-      await _loadFollows();
-      await _loadFeed();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已添加关注')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('关注失败: $e')));
-    }
-  }
 
   Future<void> _removeFollow(int id) async {
     try { await ApiService().removeFollow(id); _loadFollows(); _loadFeed(); } catch (_) {}
@@ -128,8 +82,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('探索'), actions: [
-        IconButton(icon: const Icon(Icons.search), onPressed: _showSearchDialog, tooltip: '搜索'),
-        IconButton(icon: const Icon(Icons.refresh), onPressed: _loadFeed, tooltip: '刷新'),
+        IconButton(icon: const Icon(Icons.search), onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ExploreSearchScreen())); }, tooltip: '发现'),
       ]),
       body: RefreshIndicator(
         onRefresh: () async { await _loadFeed(); await _loadFollows(); },
