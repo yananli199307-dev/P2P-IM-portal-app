@@ -85,19 +85,23 @@ class _ChatScreenState extends State<ChatScreen> {
 
     for (final contact in provider.contacts) {
       final key = 'contact_${contact.id}';
+      final time = lastMsg[key];
+      if (time == null) continue;  // 无消息不显示
       items.add(_ChatItem(
         contact: contact,
-        time: lastMsg[key] ?? DateTime.fromMillisecondsSinceEpoch(0),
-        preview: lastPreview[key] ?? '点击开始聊天',
+        time: time,
+        preview: lastPreview[key] ?? '',
       ));
     }
 
     for (final group in _groups) {
       final key = 'group_${group.id}';
+      final time = lastMsg[key];
+      if (time == null) continue;  // 无消息不显示
       items.add(_ChatItem(
         group: group,
-        time: lastMsg[key] ?? group.createdAt,
-        preview: lastPreview[key] ?? '群聊',
+        time: time,
+        preview: lastPreview[key] ?? '',
       ));
     }
 
