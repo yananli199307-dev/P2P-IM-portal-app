@@ -269,16 +269,14 @@ class ChatProvider extends ChangeNotifier {
     // 1. 本地缓存先放进内存
     _localDb.getContactMessages(0).then((msgs) {
       if (msgs.isNotEmpty) _msgCache[0] = msgs;
+      _syncAgentFromServer();
     });
     for (final c in _contacts) {
       _localDb.getContactMessages(c.id).then((msgs) {
         if (msgs.isNotEmpty) _msgCache[c.id] = msgs;
+        _syncFromServer(c.id);
       });
-      // 2. 后台从服务器同步离线消息（fire-and-forget）
-      _syncFromServer(c.id);
     }
-    // My Agent 用 getAgentMessages（能同时查到用户消息和 Agent 回复）
-    _syncAgentFromServer();
   }
 
 
@@ -341,7 +339,7 @@ class ChatProvider extends ChangeNotifier {
   Future<void> _syncAgentFromServer() async {
     try {
       final cached = _msgCache[0];
-      final latest = cached != null && cached.isNotEmpty ? cached.first.createdAt : null;
+      final latest = cached != null && cached.isNotEmpty ? cached.last.createdAt : null;
       final serverMsgs = await _apiService.getAgentMessages(since: latest?.toIso8601String());
       if (serverMsgs.isEmpty) return;
       final newMsgs = serverMsgs.where((m) => !(cached ?? []).any((c) => c.id.toString() == m['id'].toString())).toList();
