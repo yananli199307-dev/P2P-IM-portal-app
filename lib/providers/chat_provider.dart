@@ -123,6 +123,7 @@ class ChatProvider extends ChangeNotifier {
         incomingCall = {
           ...?data,
           'from_user_id': message['from_user_id'],
+          'from_contact_id': message['from_contact_id'],
         };
         // 主叫已写"呼叫中"那条记录;此处记录被叫端收到的来电时间(可选)
         notifyListeners();
