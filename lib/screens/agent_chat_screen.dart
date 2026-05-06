@@ -295,7 +295,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                   ),
           ),
           if (_isSending)
-            const LinearProgressIndicator(),
+            const SizedBox.shrink(),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
