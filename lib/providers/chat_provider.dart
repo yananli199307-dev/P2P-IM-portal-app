@@ -395,9 +395,12 @@ class ChatProvider extends ChangeNotifier {
         return;
       }
       
-      // 增量合并：用内容+时间去重（避免发送消息的时间戳临时ID与服务器DB ID不匹配）
-      final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
-      final newMsgs = serverMsgs.where((m) => !existingKeys.contains('${m.content}|${m.createdAt.toIso8601String()}')).toList();
+      // 去重：用内容对比（同一分钟内相同内容视为重复）
+      final now = DateTime.now();
+      final recentContents = _messages
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .map((m) => m.content).toSet();
+      final newMsgs = serverMsgs.where((m) => !recentContents.contains(m.content)).toList();
       
       if (newMsgs.isNotEmpty) {
         _messages.addAll(newMsgs);
@@ -495,8 +498,11 @@ class ChatProvider extends ChangeNotifier {
       messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       if (_selectedContact?.id != contactId) return;
       
-      final existingKeys = _messages.map((m) => '${m.content}|${m.createdAt.toIso8601String()}').toSet();
-      final newMsgs = messages.where((m) => !existingKeys.contains('${m.content}|${m.createdAt.toIso8601String()}')).toList();
+      final now = DateTime.now();
+      final recentContents = _messages
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .map((m) => m.content).toSet();
+      final newMsgs = messages.where((m) => !recentContents.contains(m.content)).toList();
       if (newMsgs.isNotEmpty) {
         _messages.addAll(newMsgs);
         _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
