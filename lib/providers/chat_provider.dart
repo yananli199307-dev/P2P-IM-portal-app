@@ -536,6 +536,7 @@ class ChatProvider extends ChangeNotifier {
       replyToSenderName: replyToSenderName,
     );
     _messages.add(tempMsg);
+    _localDb.upsertMessage(tempMsg);
     _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
     _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
     notifyListeners();
