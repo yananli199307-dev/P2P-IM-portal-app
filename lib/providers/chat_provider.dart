@@ -390,14 +390,13 @@ class ChatProvider extends ChangeNotifier {
       // 计算本地最新消息时间，传给服务器做增量同步
       final cached = _msgCache[contactId];
       final latest = cached != null && cached.isNotEmpty ? cached.last.createdAt : null;
-      final serverMsgs = await _apiService.getMessages(contactId,
+      final serverMsgsOrig = await _apiService.getMessages(contactId,
         since: latest?.toIso8601String(),
       );
-      serverMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      serverMsgsOrig.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       
       // UUID 去重：过滤掉自己刚发的消息（本地已有）
-      final validMsgs = serverMsgs.where((m) => !_sentMsgUuids.contains(m.msgUuid)).toList();
-      serverMsgs = validMsgs;
+      var serverMsgs = serverMsgsOrig.where((m) => !_sentMsgUuids.contains(m.msgUuid)).toList();
       
       // 没有人看这个聊天→更新缓存和DB后返回
       if (_selectedContact?.id != contactId) {
