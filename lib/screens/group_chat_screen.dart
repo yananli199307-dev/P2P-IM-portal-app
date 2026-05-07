@@ -134,7 +134,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final cached = await LocalDb().getCachedGroupMessages(widget.group.id);
     if (cached.isNotEmpty && mounted) {
       setState(() {
-        _messages = cached.map((m) => GroupMessage.fromJson(m)).toList();
+        // 合并而非覆盖（保留发送时本地添加的消息）
+        final existingIds = _messages.map((m) => m.id).toSet();
+        final newOnes = cached.where((m) => !existingIds.contains(GroupMessage.fromJson(m).id)).toList();
+        if (newOnes.isNotEmpty) {
+          _messages.insertAll(0, newOnes.map((m) => GroupMessage.fromJson(m)));
+        }
         _isLoading = false;
       });
     } else if (mounted) {
