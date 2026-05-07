@@ -49,19 +49,18 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     
     // 接收 Agent 实时回复
     context.read<ChatProvider>().onAgentReply = (content) {
-      if (mounted) {
-        setState(() {
-        final already = _messages.any((m) => m.content == content);
-        if (already) return;
-          _messages.add(AgentMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            content: content,
-            isFromUser: false,
-            createdAt: DateTime.now(),
-          ));
-        });
-  
-      }
+      if (!mounted) return;
+      // 只看 Agent 的消息去重（不回显自己发的）
+      final already = _messages.where((m) => !m.isFromUser).any((m) => m.content == content);
+      if (already) return;
+      setState(() {
+        _messages.add(AgentMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          content: content,
+          isFromUser: false,
+          createdAt: DateTime.now(),
+        ));
+      });
     };
     
     _loadHistory();
