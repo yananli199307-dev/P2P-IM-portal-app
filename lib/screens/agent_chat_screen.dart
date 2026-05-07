@@ -182,6 +182,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
     final cp = context.read<ChatProvider>();
     cp.msgCache.putIfAbsent(0, () => []);
     cp.msgCache[0]!.add(cachedMsg);
+    cp.updateAgentLastMessage(content);
 
     try {
       await ApiService().sendAgentMessage(content);

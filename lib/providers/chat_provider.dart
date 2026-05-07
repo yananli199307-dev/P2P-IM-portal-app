@@ -43,6 +43,12 @@ class ChatProvider extends ChangeNotifier {
   Map<String, String> get lastMessagePreview => _lastMessagePreview;
 
   /// 更新最后消息时间（群聊）
+  void updateAgentLastMessage(String content) {
+    _lastMessageTime['contact_0'] = DateTime.now();
+    _lastMessagePreview['contact_0'] = content;
+    notifyListeners();
+  }
+
   void updateGroupLastMessage(int groupId, String content) {
     _lastMessageTime['group_$groupId'] = DateTime.now();
     _lastMessagePreview['group_$groupId'] = content;
