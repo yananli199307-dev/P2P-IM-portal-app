@@ -46,12 +46,23 @@ class WebRTCService {
       ],
     });
     _pc!.onIceCandidate = (c) {
-      if (c.candidate != null) {
+      // ICE 收集结束(end-of-candidates)时 candidate 可能是空字符串,过滤掉避免对端 addIceCandidate 抛异常
+      final cand = c.candidate;
+      if (cand != null && cand.isNotEmpty) {
         onSignal?.call('call_ice', {
-          'candidate': c.candidate,
+          'candidate': cand,
           'sdpMid': c.sdpMid,
           'sdpMLineIndex': c.sdpMLineIndex,
         });
+      }
+    };
+    // Web 端用 addTrack(unified-plan),App 端如果只用 onAddStream 在 unified-plan 下不一定触发,
+    // 改用 onTrack 才是 unified-plan 的标准回调。同时保留 onAddStream 作为旧行为兜底。
+    _pc!.onTrack = (event) {
+      if (event.streams.isNotEmpty) {
+        final s = event.streams.first;
+        _remoteStream = s;
+        onRemoteStream?.call(s);
       }
     };
     _pc!.onAddStream = (s) {
