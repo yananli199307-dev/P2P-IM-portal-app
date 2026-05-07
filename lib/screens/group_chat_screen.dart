@@ -75,7 +75,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<GroupMessage> _messages = [];
-  bool _isLoading = true;
+  bool _isLoading = false;  // 默认不挡 ListView，发送时直接显示
   bool _isSendingFile = false;
   GroupMessage? _replyTarget;
   int _panelOpen = 0;

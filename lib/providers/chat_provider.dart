@@ -185,8 +185,10 @@ class ChatProvider extends ChangeNotifier {
         notifyListeners();
       }
       
-      // 如果当前正在查看该联系人，添加到消息列表并标记已读
+      // 如果当前正在查看该联系人，添加到消息列表（跳过自己发的重复）
       if (newMessage.contactId == _selectedContact?.id) {
+        final dup = _messages.any((m) => m.content == newMessage.content && m.isFromMe == newMessage.isFromMe);
+        if (dup) return;
         _messages.add(newMessage);
         // 如果是收到的消息，自动标记为已读
         if (!newMessage.isFromMe && newMessage.contactId != null) {
