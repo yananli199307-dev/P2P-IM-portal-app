@@ -398,7 +398,7 @@ class ChatProvider extends ChangeNotifier {
       // 去重：用内容对比（同一分钟内相同内容视为重复）
       final now = DateTime.now();
       final recentContents = _messages
-        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(seconds: 3))))
         .map((m) => m.content).toSet();
       final newMsgs = serverMsgs.where((m) => !recentContents.contains(m.content)).toList();
       
@@ -500,7 +500,7 @@ class ChatProvider extends ChangeNotifier {
       
       final now = DateTime.now();
       final recentContents = _messages
-        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(minutes: 1))))
+        .where((m) => m.createdAt.isAfter(now.subtract(const Duration(seconds: 3))))
         .map((m) => m.content).toSet();
       final newMsgs = messages.where((m) => !recentContents.contains(m.content)).toList();
       if (newMsgs.isNotEmpty) {
