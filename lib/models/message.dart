@@ -22,6 +22,7 @@ class Message {
   final int? fileSize;
   final bool isFromMe;
   final bool isRead;
+  final String? msgUuid;  // 客户端消息UUID，用于去重
   final int? replyToMessageId;  // 被回复的消息 ID
   final String? replyToContent;  // 被回复的消息内容摘要
   final String? replyToSenderName;  // 被回复者名称
@@ -38,6 +39,7 @@ class Message {
     this.fileSize,
     required this.isFromMe,
     this.isRead = false,
+    this.msgUuid,
     this.replyToMessageId,
     this.replyToContent,
     this.replyToSenderName,
@@ -55,6 +57,7 @@ class Message {
       fileName: json['file_name'],
       fileSize: json['file_size'],
       isFromMe: json['is_from_owner'] ?? false,
+      msgUuid: json['msg_uuid'],
       isRead: json['is_read'] ?? false,
       replyToMessageId: json['reply_to_message_id'],
       replyToContent: json['reply_to_content'],

@@ -4,6 +4,7 @@ import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
 import '../services/local_db.dart';
+import 'package:uuid/uuid.dart';
 
 class ChatProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -17,6 +18,7 @@ class ChatProvider extends ChangeNotifier {
   void Function(String content)? onAgentReply;  // Screen 设置，消息加载完成后调用
   final Map<int, List<Message>> _msgCache = {};
   final Map<int, List<Map<String, dynamic>>> _groupCache = {};
+  final Set<String> _sentMsgUuids = {};  // 已发送消息UUID，用于去重
   
   Map<int, List<Message>> get msgCache => _msgCache;
   Map<int, List<Map<String, dynamic>>> get groupCache => _groupCache;
@@ -393,6 +395,10 @@ class ChatProvider extends ChangeNotifier {
       );
       serverMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       
+      // UUID 去重：过滤掉自己刚发的消息（本地已有）
+      final validMsgs = serverMsgs.where((m) => !_sentMsgUuids.contains(m.msgUuid)).toList();
+      serverMsgs = validMsgs;
+      
       // 没有人看这个聊天→更新缓存和DB后返回
       if (_selectedContact?.id != contactId) {
         if (serverMsgs.isNotEmpty) {
@@ -530,6 +536,7 @@ class ChatProvider extends ChangeNotifier {
     if (_selectedContact == null) return;
 
     // 先本地显示（和群聊/Agent一致）
+    final msgUuid = const Uuid().v4();
     final tempMsg = Message(
       id: DateTime.now().millisecondsSinceEpoch,
       contactId: _selectedContact!.id,
@@ -543,6 +550,7 @@ class ChatProvider extends ChangeNotifier {
     );
     _messages.add(tempMsg);
     _localDb.upsertMessage(tempMsg);
+    _sentMsgUuids.add(msgUuid);
     _lastMessageTime['contact_${_selectedContact!.id}'] = DateTime.now();
     _lastMessagePreview['contact_${_selectedContact!.id}'] = content;
     notifyListeners();
@@ -552,6 +560,7 @@ class ChatProvider extends ChangeNotifier {
       await _apiService.sendMessage(
         _selectedContact!.id,
         content,
+        msgUuid: msgUuid,
         replyToMessageId: replyToMessageId,
         replyToContent: replyToContent,
         replyToSenderName: replyToSenderName,

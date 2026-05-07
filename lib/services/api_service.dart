@@ -225,12 +225,13 @@ class ApiService {
         .toList();
   }
 
-  Future<Message> sendMessage(int contactId, String content, {MessageType type = MessageType.text, int? replyToMessageId, String? replyToContent, String? replyToSenderName}) async {
-    final body = {
+  Future<Message> sendMessage(int contactId, String content, {MessageType type = MessageType.text, int? replyToMessageId, String? replyToContent, String? replyToSenderName, String? msgUuid}) async {
+    final body = <String, dynamic>{
       'contact_id': contactId,
       'content': content,
       'message_type': type.name,
     };
+    if (msgUuid != null) body['msg_uuid'] = msgUuid;
     if (replyToMessageId != null) body['reply_to_message_id'] = replyToMessageId;
     if (replyToContent != null) body['reply_to_content'] = replyToContent;
     if (replyToSenderName != null) body['reply_to_sender_name'] = replyToSenderName;
