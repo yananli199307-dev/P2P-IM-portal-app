@@ -185,6 +185,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       _replyTarget = null;
     });
     
+    // 写入本地缓存
+    LocalDb().upsertGroupMessages([{
+      'id': tempMsg.id,
+      'group_id': widget.group.id,
+      'content': tempMsg.content,
+      'message_type': 'text',
+      'is_from_owner': true,
+      'created_at': tempMsg.createdAt.toIso8601String(),
+    }]);
+    
     try {
       await ApiService().sendGroupMessage(
         widget.group.id, content,
